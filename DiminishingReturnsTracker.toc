@@ -1,0 +1,12 @@
+## Interface: 110107
+## Title: Diminishing Returns Tracker
+## IconTexture: Interface/Icons/Ability_rogue_kidneyshot
+## Notes: Track and display diminishing returns of crowd control abilities
+## Author: Pharmac1st
+## Version: @project-version@
+## SavedVariables: MyAddonDB
+
+Embeds.xml
+
+Core.lua
+Options.lua

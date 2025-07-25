@@ -26,14 +26,21 @@ function MyAddon:SetupOptions()
 						inline = true,
 						order = 1,
 						args = {
-						-- all your option entries here
+							-- your general option entries here
 						}
 					}
 				}
-			}
+			},
 		}
 	}
 
-  	LibStub("AceConfig-3.0"):RegisterOptionsTable("MyAddon", self.options)
-  	LibStub("AceConfigDialog-3.0"):AddToBlizOptions("MyAddon", "MyAddon")
+	-- Pull in module options if available
+	for name, module in self:IterateModules() do
+		if module.GetOptions then
+			self.options.args[name] = module:GetOptions()
+		end
+	end
+
+	LibStub("AceConfig-3.0"):RegisterOptionsTable("MyAddon", self.options)
+	LibStub("AceConfigDialog-3.0"):AddToBlizOptions("MyAddon", "MyAddon")
 end

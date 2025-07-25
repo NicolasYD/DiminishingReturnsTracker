@@ -10,3 +10,5 @@ Embeds.xml
 
 Core.lua
 Options.lua
+
+Modules/Icons.lua

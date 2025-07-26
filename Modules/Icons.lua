@@ -43,9 +43,9 @@ function Icons:GetOptions()
                 set = function(_, value)
                     MyAddon.db.profile.modules["Icons"].enabled = value
                     if value then
-                        self:Enable()
+                        MyAddon:EnableModule("Icons")
                     else
-                        self:Disable()
+                        MyAddon:DisableModule("Icons")
                     end
                 end,
                 order = 1

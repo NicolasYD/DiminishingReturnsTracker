@@ -9,21 +9,20 @@ function MyAddon:OnInitialize()
         profile = {
             modules = {
                 ['*'] = {
-                    enabled = true,
+                    enabled = false,
                 },
                 Icons = {
-                    enabled = false,
+                    enabled = true,
                 },
             }
         }
     })
 
-    -- Enable/disable modules based on profile settings
+    -- Disable modules based on saved profile settings (AceAddon will auto-enable the module at startup, regardless of saved profile settings)
     for name, module in self:IterateModules() do
-        if self.db.profile.modules[name].enabled then
-            module:Enable()
-        else
-            module:Disable()
+        local modSettings = self.db.profile.modules[name]
+        if modSettings and modSettings.enabled == false then
+            self:DisableModule(name)
         end
     end
 

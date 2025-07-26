@@ -5,7 +5,7 @@ local Icons = MyAddon:NewModule("Icons")
 function Icons:OnInitialize()
     self.db = MyAddon.db:RegisterNamespace("Icons", {
         profile = {
-            enabled = true,
+            -- defaults
         }
     })
 
@@ -25,7 +25,7 @@ end
 
 function Icons:ResetModule()
     self.db:ResetProfile()
-    print("Reset Module")
+    print("Reset module")
 end
 
 
@@ -38,14 +38,14 @@ function Icons:GetOptions()
                 type = "toggle",
                 name = "Enable Module",
                 get = function()
-                    return Icons.db.profile.enabled
+                    return MyAddon.db.profile.modules["Icons"].enabled
                 end,
                 set = function(_, value)
-                    Icons.db.profile.enabled = value
+                    MyAddon.db.profile.modules["Icons"].enabled = value
                     if value then
-                        Icons:Enable()
+                        self:Enable()
                     else
-                        Icons:Disable()
+                        self:Disable()
                     end
                 end,
                 order = 1
@@ -54,7 +54,10 @@ function Icons:GetOptions()
                 type = "execute",
 				name = "Reset Module",
 				func = function ()
-                    Icons:ResetModule()
+                    self:ResetModule()
+                end,
+                disabled = function ()
+                    return not self:IsEnabled()
                 end,
                 order = 2
             },

@@ -1,7 +1,7 @@
 local MyAddon = LibStub("AceAddon-3.0"):GetAddon("MyAddon")
 
 -- Defines and registers the addon’s options for use in the Blizzard interface options
-function MyAddon:SetupOptions()
+function MyAddon:GetOptions()
 	self.options = {
 		type = "group",
 		args = {

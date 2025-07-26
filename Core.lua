@@ -4,15 +4,32 @@ MyAddon = LibStub("AceAddon-3.0"):NewAddon("MyAddon", "AceConsole-3.0")
 
 -- Called when the addon is first loaded (before it is enabled)
 function MyAddon:OnInitialize()
-    -- Create a new database using AceDB-3.0 with default profile settings
+    -- Setup database
     self.db = LibStub("AceDB-3.0"):New("MyAddonDB", {
         profile = {
-            enabled = true
+            modules = {
+                ['*'] = {
+                    enabled = true,
+                },
+                Icons = {
+                    enabled = false,
+                },
+            }
         }
     })
 
-    -- Set up the addon configuration options
-    self:SetupOptions()
+    -- Enable/disable modules based on profile settings
+    for name, module in self:IterateModules() do
+        if self.db.profile.modules[name].enabled then
+            module:Enable()
+        else
+            module:Disable()
+        end
+    end
+
+    -- Get the addon configuration options
+    self:GetOptions()
+    print("Core initialized")
 end
 
 
@@ -21,12 +38,13 @@ function MyAddon:OnEnable()
     -- Register slash commands to open the configuration panel
     self:RegisterChatCommand("drt", "OpenOptions")
     self:RegisterChatCommand("diminishingreturnstracker", "OpenOptions")
+    print("Core enabled")
 end
 
 
 -- Called when the addon is disabled
 function MyAddon:OnDisable()
-    
+    print("Core disabled")
 end
 
 

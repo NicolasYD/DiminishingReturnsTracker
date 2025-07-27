@@ -3,16 +3,22 @@ local Icons = DRT:NewModule("Icons")
 
 
 function Icons:OnInitialize()
+    self.frames = self.frames or {}
+
     self.db = DRT.db:RegisterNamespace("Icons", {
         profile = {
-            cropIcons = false,
-            frameSize = 30,
-            iconPoint = "TOPRIGHT",
-            anchorTo = "PlayerFrame",
-            anchorPoint = "TOPRIGHT",
-            offsetX = 0,
-            offsetY = 0,
-        }
+            units = {
+                player = {
+                    cropIcons = false,
+                    frameSize = 30,
+                    iconPoint = "TOPRIGHT",
+                    anchorTo = "PlayerFrame",
+                    anchorPoint = "TOPRIGHT",
+                    offsetX = 0,
+                    offsetY = 0,
+                },
+            },
+        },
     })
 
     self:CreateFrame("player") -- create frame for development purposes (delete later)
@@ -22,16 +28,20 @@ end
 
 
 function Icons:OnEnable()
-    if self.frame then
-        self.frame:Show()
+    if self.frames then
+        for unit in pairs(self.frames) do
+            self.frames[unit]:Show()
+        end
     end
     print("Icons enabled")
 end
 
 
 function Icons:OnDisable()
-    if self.frame then
-        self.frame:Hide()
+    if self.frames then
+        for unit in pairs(self.frames) do
+            self.frames[unit]:Hide()
+        end
     end
     print("Icons disabled")
 end
@@ -39,10 +49,10 @@ end
 
 function Icons:CreateFrame(unit)
     local frame = CreateFrame("Frame", "DRT" .. self.name .. "Frame" .. unit, UIParent)
-    self.frame = frame
+    self.frames[unit] = frame
 
     -- Frame settings
-    local settings = self.db.profile
+    local settings = self.db.profile.units[unit]
     frame:SetSize(settings.frameSize, settings.frameSize)
     frame:SetPoint(settings.iconPoint, settings.anchorTo, settings.anchorPoint, settings.offsetX, settings.offsetY)
 
@@ -64,19 +74,20 @@ end
 
 
 function Icons:UpdateFrame()
-    if not self.frame then
+    if not self.frames then
         return
     end
 
-    local settings = self.db.profile
-
-    self.frame:SetSize(settings.frameSize, settings.frameSize)
-    self.frame:ClearAllPoints()
-    self.frame:SetPoint(settings.iconPoint, settings.anchorTo, settings.anchorPoint, settings.offsetX, settings.offsetY)
-    if settings.cropIcons then
-        self.frame.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-    else
-        self.frame.icon:SetTexCoord(0, 1, 0, 1)
+    for unit in pairs(self.frames) do
+        local settings = self.db.profile.units[unit]
+        self.frames[unit]:SetSize(settings.frameSize, settings.frameSize)
+        self.frames[unit]:ClearAllPoints()
+        self.frames[unit]:SetPoint(settings.iconPoint, settings.anchorTo, settings.anchorPoint, settings.offsetX, settings.offsetY)
+        if settings.cropIcons then
+            self.frames[unit].icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+        else
+            self.frames[unit].icon:SetTexCoord(0, 1, 0, 1)
+        end
     end
 end
 
@@ -88,7 +99,7 @@ function Icons:ResetModule()
 end
 
 
-function Icons:BuildIconOptions()
+function Icons:BuildIconOptions(unit)
     local anchorPointValues = {
         TOP = "TOP",
         TOPLEFT = "TOPLEFT",
@@ -117,10 +128,10 @@ function Icons:BuildIconOptions()
                     name = "Icons Border Crop",
                     desc = "",
                     get = function()
-                        return self.db.profile.cropIcons
+                        return self.db.profile.units[unit].cropIcons
                     end,
                     set = function(_, value)
-                        self.db.profile.cropIcons = value
+                        self.db.profile.units[unit].cropIcons = value
                         self:UpdateFrame()
                     end,
                     order = 1
@@ -133,10 +144,10 @@ function Icons:BuildIconOptions()
                     max = 200,
                     step = 1,
                     get = function ()
-                        return self.db.profile.frameSize
+                        return self.db.profile.units[unit].frameSize
                     end,
                     set = function (_, value)
-                        self.db.profile.frameSize = value
+                        self.db.profile.units[unit].frameSize = value
                         self:UpdateFrame()
                     end,
                     order = 2,
@@ -158,10 +169,10 @@ function Icons:BuildIconOptions()
                     name = "Anchor Frame Name",
                     desc = "Enter the name of the frame to anchor this icon to.\nExample: PlayerFrameHealthBar",
                     get = function()
-                        return self.db.profile.anchorTo or ""
+                        return self.db.profile.units[unit].anchorTo or ""
                     end,
                     set = function(_, value)
-                        self.db.profile.anchorTo = value
+                        self.db.profile.units[unit].anchorTo = value
                         self:UpdateFrame()
                     end,
                     order = 1,
@@ -178,10 +189,10 @@ function Icons:BuildIconOptions()
                     desc = "Which point of the anchor frame to anchor to.",
                     values = anchorPointValues,
                     get = function()
-                        return self.db.profile.anchorPoint
+                        return self.db.profile.units[unit].anchorPoint
                     end,
                     set = function(_, value)
-                        self.db.profile.anchorPoint = value
+                        self.db.profile.units[unit].anchorPoint = value
                         self:UpdateFrame()
                     end,
                     order = 6,
@@ -192,10 +203,10 @@ function Icons:BuildIconOptions()
                     desc = "Which point of the icon frame to anchor to.",
                     values = anchorPointValues,
                     get = function()
-                        return self.db.profile.iconPoint
+                        return self.db.profile.units[unit].iconPoint
                     end,
                     set = function(_, value)
-                        self.db.profile.iconPoint = value
+                        self.db.profile.units[unit].iconPoint = value
                         self:UpdateFrame()
                     end,
                     order = 7,
@@ -208,10 +219,10 @@ function Icons:BuildIconOptions()
                     max = 100,
                     step = 1,
                     get = function ()
-                        return self.db.profile.offsetX
+                        return self.db.profile.units[unit].offsetX
                     end,
                     set = function (_, value)
-                        self.db.profile.offsetX = value
+                        self.db.profile.units[unit].offsetX = value
                         self:UpdateFrame()
                     end,
                     order = 8,
@@ -224,10 +235,10 @@ function Icons:BuildIconOptions()
                     max = 100,
                     step = 1,
                     get = function ()
-                        return self.db.profile.offsetY
+                        return self.db.profile.units[unit].offsetY
                     end,
                     set = function (_, value)
-                        self.db.profile.offsetY = value
+                        self.db.profile.units[unit].offsetY = value
                         self:UpdateFrame()
                     end,
                     order = 9,
@@ -240,7 +251,7 @@ end
 
 
 function Icons:GetOptions()
-    return {
+    local options = {
         type = "group",
         name = "Icons",
         childGroups = "tab",
@@ -282,7 +293,7 @@ function Icons:GetOptions()
                 type = "group",
                 name = "General",
                 order = 1,
-                args = self:BuildIconOptions()
+                args = {}
             },
             diminishingReturns = {
                 type = "group",
@@ -294,4 +305,8 @@ function Icons:GetOptions()
             },
         }
     }
+
+    options.args.general.args = self:BuildIconOptions("player")
+
+    return options
 end

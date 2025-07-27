@@ -88,7 +88,7 @@ function Icons:ResetModule()
 end
 
 
-function Icons:GetOptions()
+function Icons:BuildIconOptions()
     local anchorPointValues = {
         TOP = "TOP",
         TOPLEFT = "TOPLEFT",
@@ -100,6 +100,146 @@ function Icons:GetOptions()
         BOTTOMLEFT = "BOTTOMLEFT",
         BOTTOMRIGHT = "BOTTOMRIGHT",
     }
+
+    local iconOptions = {
+        widget = {
+            type = "group",
+            name = "Widget",
+            desc = "Widget settings",
+            inline = true,
+            disabled = function ()
+                return not self:IsEnabled()
+            end,
+            order = 6,
+            args = {
+                cropIcons = {
+                    type = "toggle",
+                    name = "Icons Border Crop",
+                    desc = "",
+                    get = function()
+                        return self.db.profile.cropIcons
+                    end,
+                    set = function(_, value)
+                        self.db.profile.cropIcons = value
+                        self:UpdateFrame()
+                    end,
+                    order = 1
+                },
+                frameSize = {
+                    type = "range",
+                    name = "Icons Frame Size",
+                    desc = "",
+                    min = 0,
+                    max = 200,
+                    step = 1,
+                    get = function ()
+                        return self.db.profile.frameSize
+                    end,
+                    set = function (_, value)
+                        self.db.profile.frameSize = value
+                        self:UpdateFrame()
+                    end,
+                    order = 2,
+                },
+            },
+        },
+        position = {
+            type = "group",
+            name = "Position",
+            desc = "Position settings",
+            inline = true,
+            disabled = function ()
+                return not self:IsEnabled()
+            end,
+            order = 7,
+            args = {
+                anchorTo = {
+                    type = "input",
+                    name = "Anchor Frame Name",
+                    desc = "Enter the name of the frame to anchor this icon to.\nExample: PlayerFrameHealthBar",
+                    get = function()
+                        return self.db.profile.anchorTo or ""
+                    end,
+                    set = function(_, value)
+                        self.db.profile.anchorTo = value
+                        self:UpdateFrame()
+                    end,
+                    order = 1,
+                },
+                separator1 = {
+                    type = "description",
+                    name = "",
+                    width = "full",
+                    order = 5
+                },
+                anchorPoint = {
+                    type = "select",
+                    name = "Anchor Frame Point",
+                    desc = "Which point of the anchor frame to anchor to.",
+                    values = anchorPointValues,
+                    get = function()
+                        return self.db.profile.anchorPoint
+                    end,
+                    set = function(_, value)
+                        self.db.profile.anchorPoint = value
+                        self:UpdateFrame()
+                    end,
+                    order = 6,
+                },
+                iconPoint = {
+                    type = "select",
+                    name = "Icon Frame Point",
+                    desc = "Which point of the icon frame to anchor to.",
+                    values = anchorPointValues,
+                    get = function()
+                        return self.db.profile.iconPoint
+                    end,
+                    set = function(_, value)
+                        self.db.profile.iconPoint = value
+                        self:UpdateFrame()
+                    end,
+                    order = 7,
+                },
+                offsetX = {
+                    type = "range",
+                    name = "Icon Frame Offset X",
+                    desc = "",
+                    min = -100,
+                    max = 100,
+                    step = 1,
+                    get = function ()
+                        return self.db.profile.offsetX
+                    end,
+                    set = function (_, value)
+                        self.db.profile.offsetX = value
+                        self:UpdateFrame()
+                    end,
+                    order = 8,
+                },
+                offsetY = {
+                    type = "range",
+                    name = "Icon Frame Offset Y",
+                    desc = "",
+                    min = -100,
+                    max = 100,
+                    step = 1,
+                    get = function ()
+                        return self.db.profile.offsetY
+                    end,
+                    set = function (_, value)
+                        self.db.profile.offsetY = value
+                        self:UpdateFrame()
+                    end,
+                    order = 9,
+                },
+            }
+        }
+    }
+    return iconOptions
+end
+
+
+function Icons:GetOptions()
     return {
         type = "group",
         name = "Icons",
@@ -142,140 +282,7 @@ function Icons:GetOptions()
                 type = "group",
                 name = "General",
                 order = 1,
-                args = {
-                    widget = {
-                        type = "group",
-                        name = "Widget",
-                        desc = "Widget settings",
-                        inline = true,
-                        disabled = function ()
-                            return not self:IsEnabled()
-                        end,
-                        order = 6,
-                        args = {
-                            cropIcons = {
-                                type = "toggle",
-                                name = "Icons Border Crop",
-                                desc = "",
-                                get = function()
-                                    return self.db.profile.cropIcons
-                                end,
-                                set = function(_, value)
-                                    self.db.profile.cropIcons = value
-                                    self:UpdateFrame()
-                                end,
-                                order = 1
-                            },
-                            frameSize = {
-                                type = "range",
-                                name = "Icons Frame Size",
-                                desc = "",
-                                min = 0,
-                                max = 200,
-                                step = 1,
-                                get = function ()
-                                    return self.db.profile.frameSize
-                                end,
-                                set = function (_, value)
-                                    self.db.profile.frameSize = value
-                                    self:UpdateFrame()
-                                end,
-                                order = 2,
-                            },
-                        },
-                    },
-                    position = {
-                        type = "group",
-                        name = "Position",
-                        desc = "Position settings",
-                        inline = true,
-                        disabled = function ()
-                            return not self:IsEnabled()
-                        end,
-                        order = 7,
-                        args = {
-                            anchorTo = {
-                                type = "input",
-                                name = "Anchor Frame Name",
-                                desc = "Enter the name of the frame to anchor this icon to.\nExample: PlayerFrameHealthBar",
-                                get = function()
-                                    return self.db.profile.anchorTo or ""
-                                end,
-                                set = function(_, value)
-                                    self.db.profile.anchorTo = value
-                                    self:UpdateFrame()
-                                end,
-                                order = 1,
-                            },
-                            separator1 = {
-                                type = "description",
-                                name = "",
-                                width = "full",
-                                order = 5
-                            },
-                            anchorPoint = {
-                                type = "select",
-                                name = "Anchor Frame Point",
-                                desc = "Which point of the anchor frame to anchor to.",
-                                values = anchorPointValues,
-                                get = function()
-                                    return self.db.profile.anchorPoint
-                                end,
-                                set = function(_, value)
-                                    self.db.profile.anchorPoint = value
-                                    self:UpdateFrame()
-                                end,
-                                order = 6,
-                            },
-                            iconPoint = {
-                                type = "select",
-                                name = "Icon Frame Point",
-                                desc = "Which point of the icon frame to anchor to.",
-                                values = anchorPointValues,
-                                get = function()
-                                    return self.db.profile.iconPoint
-                                end,
-                                set = function(_, value)
-                                    self.db.profile.iconPoint = value
-                                    self:UpdateFrame()
-                                end,
-                                order = 7,
-                            },
-                            offsetX = {
-                                type = "range",
-                                name = "Icon Frame Offset X",
-                                desc = "",
-                                min = -100,
-                                max = 100,
-                                step = 1,
-                                get = function ()
-                                    return self.db.profile.offsetX
-                                end,
-                                set = function (_, value)
-                                    self.db.profile.offsetX = value
-                                    self:UpdateFrame()
-                                end,
-                                order = 8,
-                            },
-                            offsetY = {
-                                type = "range",
-                                name = "Icon Frame Offset Y",
-                                desc = "",
-                                min = -100,
-                                max = 100,
-                                step = 1,
-                                get = function ()
-                                    return self.db.profile.offsetY
-                                end,
-                                set = function (_, value)
-                                    self.db.profile.offsetY = value
-                                    self:UpdateFrame()
-                                end,
-                                order = 9,
-                            },
-                        }
-                    },
-                }
+                args = self:BuildIconOptions()
             },
             diminishingReturns = {
                 type = "group",

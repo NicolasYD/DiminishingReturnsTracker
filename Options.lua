@@ -1,9 +1,10 @@
-local MyAddon = LibStub("AceAddon-3.0"):GetAddon("MyAddon")
+local DRT = LibStub("AceAddon-3.0"):GetAddon("DRT")
 
 -- Defines and registers the addon’s options for use in the Blizzard interface options
-function MyAddon:GetOptions()
+function DRT:GetOptions()
 	self.options = {
 		type = "group",
+		name = "Diminishing Returns Tracker (DRT)",
 		args = {
 			test = {
 				type = "execute",
@@ -41,6 +42,6 @@ function MyAddon:GetOptions()
 		end
 	end
 
-	LibStub("AceConfig-3.0"):RegisterOptionsTable("MyAddon", self.options)
-	LibStub("AceConfigDialog-3.0"):AddToBlizOptions("MyAddon", "MyAddon")
+	LibStub("AceConfig-3.0"):RegisterOptionsTable("DRT", self.options)
+	LibStub("AceConfigDialog-3.0"):AddToBlizOptions("DRT", "DRT")
 end

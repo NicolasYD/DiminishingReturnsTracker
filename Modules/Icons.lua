@@ -1,9 +1,9 @@
-local MyAddon = LibStub("AceAddon-3.0"):GetAddon("MyAddon")
-local Icons = MyAddon:NewModule("Icons")
+local DRT = LibStub("AceAddon-3.0"):GetAddon("DRT")
+local Icons = DRT:NewModule("Icons")
 
 
 function Icons:OnInitialize()
-    self.db = MyAddon.db:RegisterNamespace("Icons", {
+    self.db = DRT.db:RegisterNamespace("Icons", {
         profile = {
             -- defaults
         }
@@ -38,14 +38,14 @@ function Icons:GetOptions()
                 type = "toggle",
                 name = "Enable Module",
                 get = function()
-                    return MyAddon.db.profile.modules["Icons"].enabled
+                    return DRT.db.profile.modules["Icons"].enabled
                 end,
                 set = function(_, value)
-                    MyAddon.db.profile.modules["Icons"].enabled = value
+                    DRT.db.profile.modules["Icons"].enabled = value
                     if value then
-                        MyAddon:EnableModule("Icons")
+                        DRT:EnableModule("Icons")
                     else
-                        MyAddon:DisableModule("Icons")
+                        DRT:DisableModule("Icons")
                     end
                 end,
                 order = 1

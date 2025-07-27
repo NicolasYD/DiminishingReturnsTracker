@@ -4,7 +4,7 @@
 ## Notes: Track and display diminishing returns of crowd control abilities
 ## Author: Pharmac1st
 ## Version: @project-version@
-## SavedVariables: MyAddonDB
+## SavedVariables: DRTDB
 
 Embeds.xml
 

@@ -28,7 +28,6 @@ function DRT:OnInitialize()
 
     -- Get the addon configuration options
     self:GetOptions()
-    print("Core initialized")
 end
 
 
@@ -37,13 +36,11 @@ function DRT:OnEnable()
     -- Register slash commands to open the configuration panel
     self:RegisterChatCommand("drt", "OpenOptions")
     self:RegisterChatCommand("diminishingreturnstracker", "OpenOptions")
-    print("Core enabled")
 end
 
 
 -- Called when the addon is disabled
 function DRT:OnDisable()
-    print("Core disabled")
 end
 
 

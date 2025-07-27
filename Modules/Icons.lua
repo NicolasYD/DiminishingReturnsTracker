@@ -132,11 +132,13 @@ function Icons:BuildIconOptions(unit)
         BOTTOMRIGHT = "BOTTOMRIGHT",
     }
 
+    local name = string.upper(string.sub(unit, 1, 1)) .. string.sub(unit, 2)
+
     local iconOptions = {
         type = "group",
-        name = unit,
-        desc = "",
-        order = 3,
+        name = name,
+        desc = "DR tracking for " .. unit .. " frame",
+        order = 2,
         args = {
             enabled = {
                 type = "toggle",
@@ -340,7 +342,13 @@ function Icons:GetOptions()
                 type = "group",
                 name = "General",
                 order = 1,
-                args = {}
+                args = {
+                    header = {
+                    type = "header",
+                    name = "Units to track",
+                    order = 1,
+                    },
+                }
             },
             diminishingReturns = {
                 type = "group",

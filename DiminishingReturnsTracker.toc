@@ -5,6 +5,7 @@
 ## Author: Pharmac1st
 ## Version: @project-version@
 ## SavedVariables: DRTDB
+## X-Curse-Project-ID: 1310424
 
 Embeds.xml
 

@@ -41,6 +41,10 @@ function Icons:SetupDB()
                     anchorPoint = "TOPRIGHT",
                     offsetX = -35,
                     offsetY = 5,
+                    cooldown = true,
+                    cooldownReverse = true,
+                    cooldownSwipeAlpha = 0.5,
+                    cooldownEdge = true,
                 },
                 target = {
                     enabled = false,
@@ -51,6 +55,10 @@ function Icons:SetupDB()
                     anchorPoint = "TOPLEFT",
                     offsetX = 35,
                     offsetY = 5,
+                    cooldown = true,
+                    cooldownReverse = true,
+                    cooldownSwipeAlpha = 0.5,
+                    cooldownEdge = true,
                 },
             },
         },
@@ -59,22 +67,12 @@ end
 
 
 function Icons:CreateFrame(unit)
-    local frame = CreateFrame("Frame", "DRT" .. self.name .. "Frame" .. unit, UIParent)
+    local frame = CreateFrame("Frame", unit, UIParent)
     self.frames[unit] = frame
-
-    -- Frame settings
-    local settings = self.db.profile.units[unit]
-    frame:SetSize(settings.frameSize, settings.frameSize)
-    frame:SetPoint(settings.iconPoint, settings.anchorTo, settings.anchorPoint, settings.offsetX, settings.offsetY)
 
     -- Icon texture
     frame.icon = frame:CreateTexture(nil, "BACKGROUND")
     frame.icon:SetAllPoints()
-    if settings.cropIcons then
-        self.frames[unit].icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-    else
-        self.frames[unit].icon:SetTexCoord(0, 1, 0, 1)
-    end
 
     frame.icon:SetTexture("Interface\\Icons\\INV_Jewelry_Necklace_38") -- set texture for development purposes (delete later)
 
@@ -85,7 +83,8 @@ function Icons:CreateFrame(unit)
     -- Text label
     frame.text = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     frame.text:SetPoint("BOTTOMRIGHT", -2, 2)
-    frame.text:SetText("1")
+
+    self:UpdateFrame()
 end
 
 
@@ -95,15 +94,23 @@ function Icons:UpdateFrame()
     end
 
     for unit in pairs(self.frames) do
+        local frame = self.frames[unit]
         local settings = self.db.profile.units[unit]
-        self.frames[unit]:SetSize(settings.frameSize, settings.frameSize)
-        self.frames[unit]:ClearAllPoints()
-        self.frames[unit]:SetPoint(settings.iconPoint, settings.anchorTo, settings.anchorPoint, settings.offsetX, settings.offsetY)
+        frame:SetSize(settings.frameSize, settings.frameSize)
+        frame:ClearAllPoints()
+        frame:SetPoint(settings.iconPoint, settings.anchorTo, settings.anchorPoint, settings.offsetX, settings.offsetY)
+
         if settings.cropIcons then
-            self.frames[unit].icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+            frame.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
         else
-            self.frames[unit].icon:SetTexCoord(0, 1, 0, 1)
+            frame.icon:SetTexCoord(0, 1, 0, 1)
         end
+
+        frame.cooldown:SetDrawSwipe(settings.cooldown)
+        frame.cooldown:SetReverse(settings.cooldownReverse)
+        frame.cooldown:SetSwipeColor(0, 0, 0, settings.cooldownSwipeAlpha)
+        frame.cooldown:SetDrawEdge(settings.cooldown and settings.cooldownEdge)
+
         if settings.enabled then
             self.frames[unit]:Show()
         else
@@ -166,6 +173,61 @@ function Icons:BuildIconOptions(unit)
                 end,
                 order = 2,
                 args = {
+                    cooldown = {
+                        type = "toggle",
+                        name = "Cooldown Animation",
+                        desc = "",
+                        get = function()
+                            return self.db.profile.units[unit].cooldown
+                        end,
+                        set = function(_, value)
+                            self.db.profile.units[unit].cooldown = value
+                            self:UpdateFrame()
+                        end,
+                        order = 1
+                    },
+                    cooldownReverse = {
+                        type = "toggle",
+                        name = "Cooldown Reverse",
+                        desc = "",
+                        get = function()
+                            return self.db.profile.units[unit].cooldownReverse
+                        end,
+                        set = function(_, value)
+                            self.db.profile.units[unit].cooldownReverse = value
+                            self:UpdateFrame()
+                        end,
+                        order = 2
+                    },
+                    cooldownSwipeAlpha = {
+                        type = "range",
+                        name = "Cooldown Swipe Alpha",
+                        desc = "",
+                        min = 0,
+                        max = 1,
+                        step = 0.1,
+                        get = function()
+                            return self.db.profile.units[unit].cooldownSwipeAlpha
+                        end,
+                        set = function(_, value)
+                            self.db.profile.units[unit].cooldownSwipeAlpha = value
+                            self:UpdateFrame()
+                        end,
+                        order = 3
+                    },
+                    cooldownEdge = {
+                        type = "toggle",
+                        name = "Cooldown Edge",
+                        desc = "",
+                        get = function()
+                            return self.db.profile.units[unit].cooldownEdge
+                        end,
+                        set = function(_, value)
+                            self.db.profile.units[unit].cooldownEdge = value
+                            self:UpdateFrame()
+                        end,
+                        order = 4
+                    },
                     cropIcons = {
                         type = "toggle",
                         name = "Icons Border Crop",
@@ -177,7 +239,7 @@ function Icons:BuildIconOptions(unit)
                             self.db.profile.units[unit].cropIcons = value
                             self:UpdateFrame()
                         end,
-                        order = 1
+                        order = 5
                     },
                     frameSize = {
                         type = "range",
@@ -193,7 +255,7 @@ function Icons:BuildIconOptions(unit)
                             self.db.profile.units[unit].frameSize = value
                             self:UpdateFrame()
                         end,
-                        order = 2,
+                        order = 6,
                     },
                 },
             },

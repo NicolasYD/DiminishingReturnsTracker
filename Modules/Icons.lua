@@ -199,6 +199,12 @@ function Icons:BuildIconOptions(unit)
                 end,
                 order = 2,
                 args = {
+                    header1 = {
+                    type = "header",
+                    name = "Cooldown Options",
+                    width = "full",
+                    order = 1,
+                    },
                     cooldown = {
                         type = "toggle",
                         name = "Cooldown Animation",
@@ -210,7 +216,7 @@ function Icons:BuildIconOptions(unit)
                             self.db.profile.units[unit].cooldown = value
                             self:UpdateFrame()
                         end,
-                        order = 1
+                        order = 2,
                     },
                     cooldownReverse = {
                         type = "toggle",
@@ -223,7 +229,26 @@ function Icons:BuildIconOptions(unit)
                             self.db.profile.units[unit].cooldownReverse = value
                             self:UpdateFrame()
                         end,
-                        order = 2
+                        order = 3,
+                    },
+                    cooldownEdge = {
+                        type = "toggle",
+                        name = "Cooldown Edge",
+                        desc = "",
+                        get = function()
+                            return self.db.profile.units[unit].cooldownEdge
+                        end,
+                        set = function(_, value)
+                            self.db.profile.units[unit].cooldownEdge = value
+                            self:UpdateFrame()
+                        end,
+                        order = 4,
+                    },
+                    separator1 = {
+                        type = "description",
+                        name = "",
+                        width = "full",
+                        order = 5,
                     },
                     cooldownSwipeAlpha = {
                         type = "range",
@@ -239,20 +264,19 @@ function Icons:BuildIconOptions(unit)
                             self.db.profile.units[unit].cooldownSwipeAlpha = value
                             self:UpdateFrame()
                         end,
-                        order = 3
+                        order = 6,
                     },
-                    cooldownEdge = {
-                        type = "toggle",
-                        name = "Cooldown Edge",
-                        desc = "",
-                        get = function()
-                            return self.db.profile.units[unit].cooldownEdge
-                        end,
-                        set = function(_, value)
-                            self.db.profile.units[unit].cooldownEdge = value
-                            self:UpdateFrame()
-                        end,
-                        order = 4
+                    separator2 = {
+                        type = "description",
+                        name = "",
+                        width = "full",
+                        order = 7,
+                    },
+                    header2 = {
+                    type = "header",
+                    name = "Icon Options",
+                    width = "full",
+                    order = 8,
                     },
                     cropIcons = {
                         type = "toggle",
@@ -265,7 +289,13 @@ function Icons:BuildIconOptions(unit)
                             self.db.profile.units[unit].cropIcons = value
                             self:UpdateFrame()
                         end,
-                        order = 5
+                        order = 9,
+                    },
+                    separator3 = {
+                        type = "description",
+                        name = "",
+                        width = "full",
+                        order = 10,
                     },
                     frameSize = {
                         type = "range",
@@ -281,7 +311,7 @@ function Icons:BuildIconOptions(unit)
                             self.db.profile.units[unit].frameSize = value
                             self:UpdateFrame()
                         end,
-                        order = 6,
+                        order = 11,
                     },
                 },
             },
@@ -295,15 +325,21 @@ function Icons:BuildIconOptions(unit)
                 end,
                 order = 3,
                 args = {
-                    anchorTo = {
-                        type = "input",
-                        name = "Anchor Frame Name",
-                        desc = "Enter the name of the frame to anchor this icon to.\nExample: PlayerFrameHealthBar",
+                    growIcons = {
+                        type = "select",
+                        name = "Grow Direction",
+                        desc = "Choose in which direction new icons will be shown",
+                        values = {
+                            ["Left"] = "Left",
+                            ["Right"] = "Right",
+                            ["Up"] = "Up",
+                            ["Down"] = "Down"
+                        },
                         get = function()
-                            return self.db.profile.units[unit].anchorTo or ""
+                            return self.db.profile.units[unit].growIcons
                         end,
                         set = function(_, value)
-                            self.db.profile.units[unit].anchorTo = value
+                            self.db.profile.units[unit].growIcons = value
                             self:UpdateFrame()
                         end,
                         order = 1,
@@ -312,7 +348,26 @@ function Icons:BuildIconOptions(unit)
                         type = "description",
                         name = "",
                         width = "full",
-                        order = 2
+                        order = 2,
+                    },
+                    anchorTo = {
+                        type = "input",
+                        name = "Anchor Frame Name",
+                        desc = "Enter the name of the frame to anchor this icon to.",
+                        get = function()
+                            return self.db.profile.units[unit].anchorTo or ""
+                        end,
+                        set = function(_, value)
+                            self.db.profile.units[unit].anchorTo = value
+                            self:UpdateFrame()
+                        end,
+                        order = 3,
+                    },
+                    separator2 = {
+                        type = "description",
+                        name = "",
+                        width = "full",
+                        order = 4,
                     },
                     anchorPoint = {
                         type = "select",
@@ -326,7 +381,7 @@ function Icons:BuildIconOptions(unit)
                             self.db.profile.units[unit].anchorPoint = value
                             self:UpdateFrame()
                         end,
-                        order = 3,
+                        order = 5,
                     },
                     iconPoint = {
                         type = "select",
@@ -340,7 +395,13 @@ function Icons:BuildIconOptions(unit)
                             self.db.profile.units[unit].iconPoint = value
                             self:UpdateFrame()
                         end,
-                        order = 4,
+                        order = 6,
+                    },
+                    separator3 = {
+                        type = "description",
+                        name = "",
+                        width = "full",
+                        order = 7,
                     },
                     offsetX = {
                         type = "range",
@@ -356,7 +417,7 @@ function Icons:BuildIconOptions(unit)
                             self.db.profile.units[unit].offsetX = value
                             self:UpdateFrame()
                         end,
-                        order = 5,
+                        order = 8,
                     },
                     offsetY = {
                         type = "range",
@@ -372,7 +433,7 @@ function Icons:BuildIconOptions(unit)
                             self.db.profile.units[unit].offsetY = value
                             self:UpdateFrame()
                         end,
-                        order = 6,
+                        order = 9,
                     },
                 }
             }

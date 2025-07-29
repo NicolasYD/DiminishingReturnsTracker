@@ -1,20 +1,22 @@
 local DRT = LibStub("AceAddon-3.0"):GetAddon("DRT")
 local Icons = DRT:NewModule("Icons")
 
+local DRList = LibStub("DRList-1.0")
 
 function Icons:OnInitialize()
-    self.frames = self.frames or {}
-
     if not self.db then
         self:SetupDB()
-    end
-    for unit in pairs(self.db.profile.units) do
-        self:CreateFrame(unit)
     end
 end
 
 
 function Icons:OnEnable()
+    local drCategories = DRList:GetCategories()
+    for unit in pairs(self.db.profile.units) do
+        for drCategory in pairs(drCategories) do
+            self:CreateFrame(unit, drCategory)
+        end
+    end
     self:UpdateFrame()
 end
 
@@ -22,7 +24,9 @@ end
 function Icons:OnDisable()
     if self.frames then
         for unit in pairs(self.frames) do
-            self.frames[unit]:Hide()
+            for category in pairs(self.frames[unit]) do
+                self.frames[unit][category]:Hide()
+            end
         end
     end
 end
@@ -41,13 +45,14 @@ function Icons:SetupDB()
                     anchorPoint = "TOPRIGHT",
                     offsetX = -35,
                     offsetY = 5,
+                    growIcons = "Left",
                     cooldown = true,
                     cooldownReverse = true,
                     cooldownSwipeAlpha = 0.5,
                     cooldownEdge = true,
                 },
                 target = {
-                    enabled = false,
+                    enabled = true,
                     cropIcons = true,
                     frameSize = 30,
                     iconPoint = "TOP",
@@ -55,6 +60,7 @@ function Icons:SetupDB()
                     anchorPoint = "TOPLEFT",
                     offsetX = 35,
                     offsetY = 5,
+                    growIcons = "Right",
                     cooldown = true,
                     cooldownReverse = true,
                     cooldownSwipeAlpha = 0.5,
@@ -66,9 +72,13 @@ function Icons:SetupDB()
 end
 
 
-function Icons:CreateFrame(unit)
-    local frame = CreateFrame("Frame", unit, UIParent)
-    self.frames[unit] = frame
+function Icons:CreateFrame(unit, category)
+    self.frames = self.frames or {}
+    self.frames[unit] = self.frames[unit] or {}
+    self.frames[unit][category] = self.frames[unit][category] or {}
+
+    local frame = CreateFrame("Frame", unit..category, UIParent)
+    self.frames[unit][category] = frame
 
     -- Icon texture
     frame.icon = frame:CreateTexture(nil, "BACKGROUND")
@@ -83,8 +93,6 @@ function Icons:CreateFrame(unit)
     -- Text label
     frame.text = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     frame.text:SetPoint("BOTTOMRIGHT", -2, 2)
-
-    self:UpdateFrame()
 end
 
 
@@ -93,28 +101,46 @@ function Icons:UpdateFrame()
         return
     end
 
+    local growDirection = {
+        Left = {iconPoint = "RIGHT", anchorPoint = "LEFT"},
+        Right = {iconPoint = "LEFT", anchorPoint = "RIGHT"},
+        Up = {iconPoint = "BOTTOM", anchorPoint = "TOP"},
+        Down = {iconPoint = "TOP", anchorPoint = "BOTTOM"},
+    }
+
     for unit in pairs(self.frames) do
-        local frame = self.frames[unit]
-        local settings = self.db.profile.units[unit]
-        frame:SetSize(settings.frameSize, settings.frameSize)
-        frame:ClearAllPoints()
-        frame:SetPoint(settings.iconPoint, settings.anchorTo, settings.anchorPoint, settings.offsetX, settings.offsetY)
+        local lastFrame
+        for category in pairs(self.frames[unit]) do
+            local frame = self.frames[unit][category]
+            local settings = self.db.profile.units[unit]
+            frame:SetSize(settings.frameSize, settings.frameSize)
+            frame:ClearAllPoints()
+            if not lastFrame then
+                frame:SetPoint(settings.iconPoint, settings.anchorTo, settings.anchorPoint, settings.offsetX, settings.offsetY)
+            else
+                local direction = settings.growIcons
+                local iconPoint = growDirection[direction].iconPoint
+                local anchorPoint = growDirection[direction].anchorPoint
+                frame:SetPoint(iconPoint, lastFrame, anchorPoint)
+            end
+            lastFrame = frame
 
-        if settings.cropIcons then
-            frame.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-        else
-            frame.icon:SetTexCoord(0, 1, 0, 1)
-        end
+            if settings.cropIcons then
+                frame.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+            else
+                frame.icon:SetTexCoord(0, 1, 0, 1)
+            end
 
-        frame.cooldown:SetDrawSwipe(settings.cooldown)
-        frame.cooldown:SetReverse(settings.cooldownReverse)
-        frame.cooldown:SetSwipeColor(0, 0, 0, settings.cooldownSwipeAlpha)
-        frame.cooldown:SetDrawEdge(settings.cooldown and settings.cooldownEdge)
+            frame.cooldown:SetDrawSwipe(settings.cooldown)
+            frame.cooldown:SetReverse(settings.cooldownReverse)
+            frame.cooldown:SetSwipeColor(0, 0, 0, settings.cooldownSwipeAlpha)
+            frame.cooldown:SetDrawEdge(settings.cooldown and settings.cooldownEdge)
 
-        if settings.enabled then
-            self.frames[unit]:Show()
-        else
-            self.frames[unit]:Hide()
+            if settings.enabled then
+                frame:Show()
+            else
+                frame:Hide()
+            end
         end
     end
 end

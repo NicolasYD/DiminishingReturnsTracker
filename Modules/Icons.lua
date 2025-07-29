@@ -46,6 +46,7 @@ function Icons:SetupDB()
                     offsetX = -35,
                     offsetY = 5,
                     growIcons = "Left",
+                    iconsSpacing = 5,
                     cooldown = true,
                     cooldownReverse = true,
                     cooldownSwipeAlpha = 0.5,
@@ -61,6 +62,7 @@ function Icons:SetupDB()
                     offsetX = 35,
                     offsetY = 5,
                     growIcons = "Right",
+                    iconsSpacing = 5,
                     cooldown = true,
                     cooldownReverse = true,
                     cooldownSwipeAlpha = 0.5,
@@ -121,7 +123,8 @@ function Icons:UpdateFrame()
                 local direction = settings.growIcons
                 local iconPoint = growDirection[direction].iconPoint
                 local anchorPoint = growDirection[direction].anchorPoint
-                frame:SetPoint(iconPoint, lastFrame, anchorPoint)
+                local spacing = settings.iconsSpacing
+                frame:SetPoint(iconPoint, lastFrame, anchorPoint, ((anchorPoint == "RIGHT" and spacing) or (anchorPoint == "LEFT" and - spacing)) or 0, ((anchorPoint == "TOP" and spacing) or (anchorPoint == "BOTTOM" and - spacing)) or 0)
             end
             lastFrame = frame
 
@@ -342,13 +345,29 @@ function Icons:BuildIconOptions(unit)
                             self.db.profile.units[unit].growIcons = value
                             self:UpdateFrame()
                         end,
-                        order = 1,
+                        order = 5,
+                    },
+                    iconsSpacing = {
+                        type = "range",
+                        name = "Icon Spacing",
+                        desc = "Adjust the gap between the icons",
+                        min = 0,
+                        max = 200,
+                        step = 1,
+                        get = function ()
+                            return self.db.profile.units[unit].iconsSpacing
+                        end,
+                        set = function (_, value)
+                            self.db.profile.units[unit].iconsSpacing = value
+                            self:UpdateFrame()
+                        end,
+                        order = 6,
                     },
                     separator1 = {
                         type = "description",
                         name = "",
                         width = "full",
-                        order = 2,
+                        order = 10,
                     },
                     anchorTo = {
                         type = "input",
@@ -361,13 +380,13 @@ function Icons:BuildIconOptions(unit)
                             self.db.profile.units[unit].anchorTo = value
                             self:UpdateFrame()
                         end,
-                        order = 3,
+                        order = 15,
                     },
                     separator2 = {
                         type = "description",
                         name = "",
                         width = "full",
-                        order = 4,
+                        order = 20,
                     },
                     anchorPoint = {
                         type = "select",
@@ -381,7 +400,7 @@ function Icons:BuildIconOptions(unit)
                             self.db.profile.units[unit].anchorPoint = value
                             self:UpdateFrame()
                         end,
-                        order = 5,
+                        order = 25,
                     },
                     iconPoint = {
                         type = "select",
@@ -395,13 +414,13 @@ function Icons:BuildIconOptions(unit)
                             self.db.profile.units[unit].iconPoint = value
                             self:UpdateFrame()
                         end,
-                        order = 6,
+                        order = 30,
                     },
                     separator3 = {
                         type = "description",
                         name = "",
                         width = "full",
-                        order = 7,
+                        order = 35,
                     },
                     offsetX = {
                         type = "range",
@@ -417,7 +436,7 @@ function Icons:BuildIconOptions(unit)
                             self.db.profile.units[unit].offsetX = value
                             self:UpdateFrame()
                         end,
-                        order = 8,
+                        order = 40,
                     },
                     offsetY = {
                         type = "range",
@@ -433,7 +452,7 @@ function Icons:BuildIconOptions(unit)
                             self.db.profile.units[unit].offsetY = value
                             self:UpdateFrame()
                         end,
-                        order = 9,
+                        order = 45,
                     },
                 }
             }

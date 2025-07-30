@@ -4,6 +4,8 @@ local Icons = DRT:NewModule("Icons")
 local DRList = LibStub("DRList-1.0")
 
 function Icons:OnInitialize()
+    self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+
     if not self.db then
         self:SetupDB()
     end
@@ -145,6 +147,70 @@ function Icons:CreateFrame(unit, category)
     -- Text label
     frame.text = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     frame.text:SetPoint("BOTTOMRIGHT", -2, 2)
+end
+
+
+function Icons:COMBAT_LOG_EVENT_UNFILTERED()
+    local _, eventType, _, _, _, _, _, destGUID, _, destFlags, _, spellID, _, _, auraType = CombatLogGetCurrentEventInfo()
+
+    -- Check all debuffs found in the combat log
+    if auraType == "DEBUFF" then
+        -- Get the DR category or exit immediately if current debuff doesn't have a DR
+        local category, sharedCategories = DRList:GetCategoryBySpellID(spellID)
+        if not category then return end
+
+        -- Check if unit that got the debuff is a player
+        -- You might also want to check if it's a hostile or friendly unit depending on your needs
+        local isPlayer = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_PLAYER) ~= 0
+        if not isPlayer then return end
+        -- for PvE too: if not isPlayer and not DRList:IsPvECategory(category) then return end
+
+        -- The debuff has faded or refreshed, DR timer starts
+        if eventType == "SPELL_AURA_REMOVED" or eventType == "SPELL_AURA_REFRESH" then
+            --local unitID = UnitTokenFromGUID(destGUID)
+
+            -- Trigger main DR category
+            self:StartOrUpdateDRTimer(category, destGUID)
+
+            -- Trigger any shared DR categories
+            if sharedCategories then
+                for i = 1, #sharedCategories do
+                    if sharedCategories[i] ~= category then
+                        self:StartOrUpdateDRTimer(sharedCategories[i], destGUID)
+                    end
+                end
+            end
+        end
+    end
+end
+
+
+function Icons:StartOrUpdateDRTimer(drCategory, unitGUID)
+    -- Table for storing all DRs
+    local trackedPlayers = {}
+
+    -- Create or update DR tables for unit
+    trackedPlayers[unitGUID] = trackedPlayers[unitGUID] or {}
+    trackedPlayers[unitGUID][drCategory] = trackedPlayers[unitGUID][drCategory] or {}
+
+    local data = trackedPlayers[unitGUID][drCategory]
+
+    -- Set how many times the DR category has been applied so far
+    if data.diminished == nil or GetTime() >= (data.expirationTime or 0) then -- is nil or DR expired
+        data.diminished = 1
+    else
+        data.diminished = DRList:NextDR(data.diminished, drCategory)
+    end
+
+    -- Set DR category expiration time
+    data.expirationTime = GetTime() + DRList:GetResetTime(drCategory)
+
+    -- Do your stuff here, start a frame timer, etc.
+    -- Then make sure to delete the category data after 18 seconds (DRList:GetResetTime()).
+    -- You might also want to delete all data on UNIT_DIED and loading screen events.
+    --
+    -- trackedPlayers[unitGUID] can now be referenced in future unit events, e.g 'PLAYER_TARGET_CHANGED',
+    -- but make sure to check the expiration time per category & delete any expired data if needed.
 end
 
 

@@ -69,6 +69,44 @@ function Icons:SetupDB()
                     cooldownEdge = true,
                 },
             },
+            categories = {
+                ["*"] = {
+                    priority = 0,
+                    order = 0,
+                },
+                stun = {
+                    priority = 8,
+                    order = 1,
+                },
+                disorient = {
+                    priority = 7,
+                    order = 2,
+                },
+                incapacitate = {
+                    priority = 6,
+                    order = 3,
+                },
+                silence = {
+                    priority = 5,
+                    order = 4,
+                },
+                disarm = {
+                    priority = 4,
+                    order = 5,
+                },
+                knockback = {
+                    priority = 3,
+                    order = 6,
+                },
+                root = {
+                    priority = 2,
+                    order = 7,
+                },
+                taunt = {
+                    priority = 1,
+                    order = 8,
+                },
+            },
         },
     })
 end
@@ -463,6 +501,28 @@ function Icons:BuildIconOptions(unit)
 end
 
 
+function Icons:BuildDrOptions(category, name, totalCategories)
+    local drOptions = {
+        type = "range",
+        name = name,
+        desc = "",
+        min = 0,
+        max = totalCategories,
+        step = 1,
+        get = function ()
+            return self.db.profile.categories[category].priority
+        end,
+        set = function (_, value)
+            self.db.profile.categories[category].priority = value
+            self:UpdateFrame()
+        end,
+        order = 2 + self.db.profile.categories[category].order,
+    }
+
+    return drOptions
+end
+
+
 function Icons:GetOptions()
     if not self.db then
         self:SetupDB()
@@ -523,7 +583,11 @@ function Icons:GetOptions()
                 name = "DRs",
                 order = 2,
                 args = {
-
+                    header = {
+                    type = "header",
+                    name = "DR Category Priority",
+                    order = 1,
+                    },
                 }
             },
         }
@@ -531,6 +595,15 @@ function Icons:GetOptions()
 
     for unit in pairs(self.db.profile.units) do
         options.args.general.args[unit] = self:BuildIconOptions(unit)
+    end
+
+    local drCategories = DRList:GetCategories()
+    local count = 0
+    for _ in pairs(drCategories) do
+        count = count + 1
+    end
+    for category, name in pairs(drCategories) do
+        options.args.diminishingReturns.args[category] = self:BuildDrOptions(category, name, count)
     end
 
     return options

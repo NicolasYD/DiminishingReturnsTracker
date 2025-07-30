@@ -1,5 +1,5 @@
 local DRT = LibStub("AceAddon-3.0"):GetAddon("DRT")
-local Icons = DRT:NewModule("Icons")
+local Icons = DRT:NewModule("Icons", "AceEvent-3.0")
 
 local DRList = LibStub("DRList-1.0")
 

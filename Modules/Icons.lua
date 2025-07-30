@@ -73,40 +73,48 @@ function Icons:SetupDB()
                 ["*"] = {
                     priority = 0,
                     order = 0,
-                    icon = "1_dynamic",
+                    icon = "dynamic",
                 },
-                --[[ stun = {
+                stun = {
                     priority = 8,
                     order = 1,
+                    icon = "dynamic",
                 },
                 disorient = {
                     priority = 7,
                     order = 2,
+                    icon = "dynamic",
                 },
                 incapacitate = {
                     priority = 6,
                     order = 3,
+                    icon = "dynamic",
                 },
                 silence = {
                     priority = 5,
                     order = 4,
+                    icon = "dynamic",
                 },
                 disarm = {
                     priority = 4,
                     order = 5,
+                    icon = "dynamic",
                 },
                 knockback = {
                     priority = 3,
                     order = 6,
+                    icon = "dynamic",
                 },
                 root = {
                     priority = 2,
                     order = 7,
+                    icon = "dynamic",
                 },
                 taunt = {
                     priority = 1,
                     order = 8,
-                }, ]]
+                    icon = "dynamic",
+                },
             },
         },
     })
@@ -506,9 +514,12 @@ function Icons:BuildDrIconOptions(category, name)
     local spellList = DRList:GetSpells()
 
     local iconTable = {
-        ["1_dynamic"] = "|TInterface\\ICONS\\INV_Misc_QuestionMark:16:16|t Dynamic",
+        ["dynamic"] = "|TInterface\\ICONS\\INV_Misc_QuestionMark:16:16|t Dynamic",
     }
-    local sortingTable = {}
+    local sortingTable = {
+        "dynamic",
+    }
+    local seen = {}
 
     for spellID, drCategory in pairs(spellList) do
         local spellInfo = C_Spell.GetSpellInfo(spellID)
@@ -516,13 +527,20 @@ function Icons:BuildDrIconOptions(category, name)
         if spellInfo and drCategory == category then
             local spellName = spellInfo.name
             local icon = spellInfo.originalIconID
-            iconTable[spellID] = "|T" .. icon .. ":16:16|t " .. spellName
-            table.insert(sortingTable, spellID)
+            local value = "|T" .. icon .. ":16:16|t " .. spellName
+            if not seen[value] then
+                iconTable[spellID] = value
+                table.insert(sortingTable, spellID)
+                seen[value] = "seen"
+            end
         end
     end
 
     -- Sort spellIDs by spell name from iconTable value
     table.sort(sortingTable, function(a, b)
+        if a == "dynamic" then return true end
+        if b == "dynamic" then return false end
+
         local aText = iconTable[a]:match("|t%s*(.+)")
         local bText = iconTable[b]:match("|t%s*(.+)")
         return aText < bText
@@ -541,7 +559,7 @@ function Icons:BuildDrIconOptions(category, name)
             self.db.profile.categories[category].icon = value
             self:UpdateFrame()
         end,
-        order = 5,
+        order = 10 + self.db.profile.categories[category].order,
     }
 
     return iconOptions
@@ -563,7 +581,7 @@ function Icons:BuildDrOptions(category, name, totalCategories)
             self.db.profile.categories[category].priority = value
             self:UpdateFrame()
         end,
-        order = 11 + self.db.profile.categories[category].order,
+        order = 20 + self.db.profile.categories[category].order,
     }
 
     return drOptions
@@ -633,12 +651,12 @@ function Icons:GetOptions()
                     header1 = {
                     type = "header",
                     name = "DR Category Icons",
-                    order = 5,
+                    order = 10,
                     },
                     header2 = {
                     type = "header",
                     name = "DR Category Priority",
-                    order = 10,
+                    order = 20,
                     },
                 }
             },

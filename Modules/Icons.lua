@@ -33,6 +33,54 @@ end
 
 
 function Icons:SetupDB()
+    local defaultCategories = {
+        ["*"] = {
+            priority = 0,
+            order = 0,
+            icon = "dynamic",
+        },
+        stun = {
+            priority = 8,
+            order = 1,
+            icon = "dynamic",
+        },
+        disorient = {
+            priority = 7,
+            order = 2,
+            icon = "dynamic",
+        },
+        incapacitate = {
+            priority = 6,
+            order = 3,
+            icon = "dynamic",
+        },
+        silence = {
+            priority = 5,
+            order = 4,
+            icon = "dynamic",
+        },
+        disarm = {
+            priority = 4,
+            order = 5,
+            icon = "dynamic",
+        },
+        knockback = {
+            priority = 3,
+            order = 6,
+            icon = "dynamic",
+        },
+        root = {
+            priority = 2,
+            order = 7,
+            icon = "dynamic",
+        },
+        taunt = {
+            priority = 1,
+            order = 8,
+            icon = "dynamic",
+        },
+    }
+
     self.db = DRT.db:RegisterNamespace("Icons", {
         profile = {
             units = {
@@ -51,6 +99,7 @@ function Icons:SetupDB()
                     cooldownReverse = true,
                     cooldownSwipeAlpha = 0.5,
                     cooldownEdge = true,
+                    categories = defaultCategories
                 },
                 target = {
                     enabled = true,
@@ -67,53 +116,7 @@ function Icons:SetupDB()
                     cooldownReverse = true,
                     cooldownSwipeAlpha = 0.5,
                     cooldownEdge = true,
-                },
-            },
-            categories = {
-                ["*"] = {
-                    priority = 0,
-                    order = 0,
-                    icon = "dynamic",
-                },
-                stun = {
-                    priority = 8,
-                    order = 1,
-                    icon = "dynamic",
-                },
-                disorient = {
-                    priority = 7,
-                    order = 2,
-                    icon = "dynamic",
-                },
-                incapacitate = {
-                    priority = 6,
-                    order = 3,
-                    icon = "dynamic",
-                },
-                silence = {
-                    priority = 5,
-                    order = 4,
-                    icon = "dynamic",
-                },
-                disarm = {
-                    priority = 4,
-                    order = 5,
-                    icon = "dynamic",
-                },
-                knockback = {
-                    priority = 3,
-                    order = 6,
-                    icon = "dynamic",
-                },
-                root = {
-                    priority = 2,
-                    order = 7,
-                    icon = "dynamic",
-                },
-                taunt = {
-                    priority = 1,
-                    order = 8,
-                    icon = "dynamic",
+                    categories = defaultCategories
                 },
             },
         },
@@ -510,7 +513,7 @@ function Icons:BuildIconOptions(unit)
 end
 
 
-function Icons:BuildDrIconOptions(category, name)
+function Icons:BuildDrIconOptions(category, name, unit)
     local spellList = DRList:GetSpells()
 
     local iconTable = {
@@ -553,20 +556,23 @@ function Icons:BuildDrIconOptions(category, name)
         values = iconTable,
         sorting = sortingTable,
         get = function()
-            return self.db.profile.categories[category].icon
+            return self.db.profile.units[unit].categories[category].icon
         end,
         set = function(_, value)
-            self.db.profile.categories[category].icon = value
+            self.db.profile.units[unit].categories[category].icon = value
             self:UpdateFrame()
         end,
-        order = 10 + self.db.profile.categories[category].order,
+        disabled = function ()
+            return not self:IsEnabled() or not self.db.profile.units[unit].enabled
+        end,
+        order = 100 + self.db.profile.units[unit].categories[category].order,
     }
 
     return iconOptions
 end
 
 
-function Icons:BuildDrOptions(category, name, totalCategories)
+function Icons:BuildDrOptions(category, name, unit, totalCategories)
     local drOptions = {
         type = "range",
         name = name,
@@ -575,13 +581,16 @@ function Icons:BuildDrOptions(category, name, totalCategories)
         max = totalCategories,
         step = 1,
         get = function ()
-            return self.db.profile.categories[category].priority
+            return self.db.profile.units[unit].categories[category].priority
         end,
         set = function (_, value)
-            self.db.profile.categories[category].priority = value
+            self.db.profile.units[unit].categories[category].priority = value
             self:UpdateFrame()
         end,
-        order = 20 + self.db.profile.categories[category].order,
+        disabled = function ()
+            return not self:IsEnabled() or not self.db.profile.units[unit].enabled
+        end,
+        order = 200 + self.db.profile.units[unit].categories[category].order,
     }
 
     return drOptions
@@ -635,47 +644,61 @@ function Icons:GetOptions()
                 type = "group",
                 name = "General",
                 order = 1,
-                args = {
-                    header = {
-                    type = "header",
-                    name = "Units to track",
-                    order = 1,
-                    },
-                }
+                args = {}
             },
             diminishingReturns = {
                 type = "group",
                 name = "DRs",
                 order = 2,
-                args = {
-                    header1 = {
-                    type = "header",
-                    name = "DR Category Icons",
-                    order = 10,
-                    },
-                    header2 = {
-                    type = "header",
-                    name = "DR Category Priority",
-                    order = 20,
-                    },
-                }
+                args = {}
             },
         }
     }
-
-    for unit in pairs(self.db.profile.units) do
-        options.args.general.args[unit] = self:BuildIconOptions(unit)
-    end
 
     local drCategories = DRList:GetCategories()
     local count = 0
     for _ in pairs(drCategories) do
         count = count + 1
     end
-    for category, name in pairs(drCategories) do
-        options.args.diminishingReturns.args[category.."Icon"] = self:BuildDrIconOptions(category, name)
-        options.args.diminishingReturns.args[category.."Priority"] = self:BuildDrOptions(category, name, count)
+    for unit in pairs(self.db.profile.units) do
+        local name = string.upper(string.sub(unit, 1, 1)) .. string.sub(unit, 2)
+
+        options.args.general.args[unit] = self:BuildIconOptions(unit)
+        options.args.diminishingReturns.args[unit] = {
+            type = "group",
+            name = name,
+            order = 2,
+            args = {
+                separator1 = {
+                    type = "description",
+                    name = "",
+                    width = "full",
+                    order = 99,
+                },
+                header1 = {
+                    type = "header",
+                    name = "DR Category Icons",
+                    order = 100,
+                },
+                separator2 = {
+                    type = "description",
+                    name = "",
+                    width = "full",
+                    order = 199,
+                },
+                header2 = {
+                    type = "header",
+                    name = "DR Category Priority",
+                    order = 200,
+                },
+            }
+        }
+        for category, categoryName in pairs(drCategories) do
+            options.args.diminishingReturns.args[unit].args[category .. "Icon"] = self:BuildDrIconOptions(category, categoryName, unit)
+            options.args.diminishingReturns.args[unit].args[category .. "Priority"] = self:BuildDrOptions(category, categoryName, unit, count)
+        end
     end
+
 
     return options
 end

@@ -73,8 +73,9 @@ function Icons:SetupDB()
                 ["*"] = {
                     priority = 0,
                     order = 0,
+                    icon = "1_dynamic",
                 },
-                stun = {
+                --[[ stun = {
                     priority = 8,
                     order = 1,
                 },
@@ -105,7 +106,7 @@ function Icons:SetupDB()
                 taunt = {
                     priority = 1,
                     order = 8,
-                },
+                }, ]]
             },
         },
     })
@@ -501,6 +502,52 @@ function Icons:BuildIconOptions(unit)
 end
 
 
+function Icons:BuildDrIconOptions(category, name)
+    local spellList = DRList:GetSpells()
+
+    local iconTable = {
+        ["1_dynamic"] = "|TInterface\\ICONS\\INV_Misc_QuestionMark:16:16|t Dynamic",
+    }
+    local sortingTable = {}
+
+    for spellID, drCategory in pairs(spellList) do
+        local spellInfo = C_Spell.GetSpellInfo(spellID)
+
+        if spellInfo and drCategory == category then
+            local spellName = spellInfo.name
+            local icon = spellInfo.originalIconID
+            iconTable[spellID] = "|T" .. icon .. ":16:16|t " .. spellName
+            table.insert(sortingTable, spellID)
+        end
+    end
+
+    -- Sort spellIDs by spell name from iconTable value
+    table.sort(sortingTable, function(a, b)
+        local aText = iconTable[a]:match("|t%s*(.+)")
+        local bText = iconTable[b]:match("|t%s*(.+)")
+        return aText < bText
+    end)
+
+    local iconOptions = {
+        type = "select",
+        name = name,
+        desc = "Choose the icon that you want to display for this DR category",
+        values = iconTable,
+        sorting = sortingTable,
+        get = function()
+            return self.db.profile.categories[category].icon
+        end,
+        set = function(_, value)
+            self.db.profile.categories[category].icon = value
+            self:UpdateFrame()
+        end,
+        order = 5,
+    }
+
+    return iconOptions
+end
+
+
 function Icons:BuildDrOptions(category, name, totalCategories)
     local drOptions = {
         type = "range",
@@ -516,7 +563,7 @@ function Icons:BuildDrOptions(category, name, totalCategories)
             self.db.profile.categories[category].priority = value
             self:UpdateFrame()
         end,
-        order = 2 + self.db.profile.categories[category].order,
+        order = 11 + self.db.profile.categories[category].order,
     }
 
     return drOptions
@@ -583,10 +630,15 @@ function Icons:GetOptions()
                 name = "DRs",
                 order = 2,
                 args = {
-                    header = {
+                    header1 = {
+                    type = "header",
+                    name = "DR Category Icons",
+                    order = 5,
+                    },
+                    header2 = {
                     type = "header",
                     name = "DR Category Priority",
-                    order = 1,
+                    order = 10,
                     },
                 }
             },
@@ -603,7 +655,8 @@ function Icons:GetOptions()
         count = count + 1
     end
     for category, name in pairs(drCategories) do
-        options.args.diminishingReturns.args[category] = self:BuildDrOptions(category, name, count)
+        options.args.diminishingReturns.args[category.."Icon"] = self:BuildDrIconOptions(category, name)
+        options.args.diminishingReturns.args[category.."Priority"] = self:BuildDrOptions(category, name, count)
     end
 
     return options

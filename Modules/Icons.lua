@@ -185,6 +185,25 @@ function Icons:COMBAT_LOG_EVENT_UNFILTERED()
 end
 
 
+function Icons:GetUnitToken(unitGUID)
+    local unitTokens = {
+        "player", "target", "focus",
+        "party1", "party2", "party3", "party4",
+        "arena1", "arena2", "arena3",
+    }
+
+    local matches = {}
+
+    for _, unitToken in ipairs(unitTokens) do
+        if UnitGUID(unitToken) == unitGUID then
+            table.insert(matches, unitToken)
+        end
+    end
+
+    return matches
+end
+
+
 function Icons:StartOrUpdateDRTimer(drCategory, unitGUID)
     -- Table for storing all DRs
     local trackedPlayers = {}

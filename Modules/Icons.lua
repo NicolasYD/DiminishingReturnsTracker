@@ -230,7 +230,19 @@ function Icons:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
     for _, unitToken in ipairs(unitTokens) do
         print(unitToken)
         local frame = self.frames[unitToken][drCategory]
+        local categoryIcon = self.db.profile.units[unitToken].categories[drCategory].icon
+
+        if categoryIcon == "dynamic" then
+            local spellInfo = C_Spell.GetSpellInfo(spellID)
+            frame.icon:SetTexture(spellInfo.originalIconID)
+        else
+            local spellInfo = C_Spell.GetSpellInfo(categoryIcon)
+            frame.icon:SetTexture(spellInfo.originalIconID)
+        end
+
+        frame.active = true
         frame.cooldown:SetCooldown(GetTime(), 18)
+        self:UpdateFrame()
     end
 
     -- Then make sure to delete the category data after 18 seconds (DRList:GetResetTime()).
@@ -254,12 +266,30 @@ function Icons:UpdateFrame()
     }
 
     for unit in pairs(self.frames) do
+        local activeFrames = {}
+
+        for category, frame in pairs(self.frames[unit]) do
+            if frame.active then
+                table.insert(activeFrames, {
+                    category = category,
+                    frame = frame,
+                    priority = self.db.profile.units[unit].categories[category].priority,
+                })
+            end
+        end
+
+        table.sort(activeFrames, function(a, b)
+            return a.priority > b.priority
+        end)
+
         local lastFrame
-        for category in pairs(self.frames[unit]) do
-            local frame = self.frames[unit][category]
-            local settings = self.db.profile.units[unit]
+        local settings = self.db.profile.units[unit]
+
+        for _, entry in ipairs(activeFrames) do
+            local frame = entry.frame
             frame:SetSize(settings.frameSize, settings.frameSize)
             frame:ClearAllPoints()
+
             if not lastFrame then
                 frame:SetPoint(settings.iconPoint, settings.anchorTo, settings.anchorPoint, settings.offsetX, settings.offsetY)
             else
@@ -267,8 +297,16 @@ function Icons:UpdateFrame()
                 local iconPoint = growDirection[direction].iconPoint
                 local anchorPoint = growDirection[direction].anchorPoint
                 local spacing = settings.iconsSpacing
-                frame:SetPoint(iconPoint, lastFrame, anchorPoint, ((anchorPoint == "RIGHT" and spacing) or (anchorPoint == "LEFT" and - spacing)) or 0, ((anchorPoint == "TOP" and spacing) or (anchorPoint == "BOTTOM" and - spacing)) or 0)
+
+                frame:SetPoint(
+                    iconPoint,
+                    lastFrame,
+                    anchorPoint,
+                    (anchorPoint == "RIGHT" and spacing) or (anchorPoint == "LEFT" and -spacing) or 0,
+                    (anchorPoint == "TOP" and spacing) or (anchorPoint == "BOTTOM" and -spacing) or 0
+                )
             end
+
             lastFrame = frame
 
             if settings.cropIcons then
@@ -277,6 +315,7 @@ function Icons:UpdateFrame()
                 frame.icon:SetTexCoord(0, 1, 0, 1)
             end
 
+            frame.cooldown:SetDrawBling(false)
             frame.cooldown:SetDrawSwipe(settings.cooldown)
             frame.cooldown:SetReverse(settings.cooldownReverse)
             frame.cooldown:SetSwipeColor(0, 0, 0, settings.cooldownSwipeAlpha)

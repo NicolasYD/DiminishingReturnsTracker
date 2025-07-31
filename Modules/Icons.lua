@@ -162,21 +162,22 @@ function Icons:COMBAT_LOG_EVENT_UNFILTERED()
         -- Check if unit that got the debuff is a player
         -- You might also want to check if it's a hostile or friendly unit depending on your needs
         local isPlayer = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_PLAYER) ~= 0
-        if not isPlayer then return end
-        -- for PvE too: if not isPlayer and not DRList:IsPvECategory(category) then return end
+        --if not isPlayer then return end
+        -- for PvE too: 
+        if not isPlayer and not DRList:IsPvECategory(category) then return end
 
         -- The debuff has faded or refreshed, DR timer starts
         if eventType == "SPELL_AURA_REMOVED" or eventType == "SPELL_AURA_REFRESH" then
             --local unitID = UnitTokenFromGUID(destGUID)
 
             -- Trigger main DR category
-            self:StartOrUpdateDRTimer(category, destGUID)
+            self:StartOrUpdateDRTimer(category, destGUID, spellID)
 
             -- Trigger any shared DR categories
             if sharedCategories then
                 for i = 1, #sharedCategories do
                     if sharedCategories[i] ~= category then
-                        self:StartOrUpdateDRTimer(sharedCategories[i], destGUID)
+                        self:StartOrUpdateDRTimer(sharedCategories[i], destGUID, spellID)
                     end
                 end
             end
@@ -204,7 +205,7 @@ function Icons:GetUnitToken(unitGUID)
 end
 
 
-function Icons:StartOrUpdateDRTimer(drCategory, unitGUID)
+function Icons:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
     -- Table for storing all DRs
     local trackedPlayers = {}
 
@@ -225,6 +226,13 @@ function Icons:StartOrUpdateDRTimer(drCategory, unitGUID)
     data.expirationTime = GetTime() + DRList:GetResetTime(drCategory)
 
     -- Do your stuff here, start a frame timer, etc.
+    local unitTokens = self:GetUnitToken(unitGUID)
+    for _, unitToken in ipairs(unitTokens) do
+        print(unitToken)
+        local frame = self.frames[unitToken][drCategory]
+        frame.cooldown:SetCooldown(GetTime(), 18)
+    end
+
     -- Then make sure to delete the category data after 18 seconds (DRList:GetResetTime()).
     -- You might also want to delete all data on UNIT_DIED and loading screen events.
     --

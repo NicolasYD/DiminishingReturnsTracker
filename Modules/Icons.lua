@@ -5,10 +5,13 @@ local DRList = LibStub("DRList-1.0")
 
 function Icons:OnInitialize()
     self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+    self:RegisterEvent("PLAYER_TARGET_CHANGED")
 
     if not self.db then
         self:SetupDB()
     end
+
+    self.trackedPlayers = {}
 end
 
 
@@ -186,6 +189,53 @@ function Icons:COMBAT_LOG_EVENT_UNFILTERED()
 end
 
 
+function Icons:PLAYER_TARGET_CHANGED()
+    local targetGUID = UnitGUID("target")
+    if not targetGUID then return end
+
+    local tracked = self.trackedPlayers and self.trackedPlayers[targetGUID]
+    local unitToken = "target"
+
+    if not tracked then
+        local frames = self.frames[unitToken]
+        for _, frame in pairs(frames) do
+            if frame then
+                frame:Hide()
+            end
+        end
+        return
+    end
+
+    for drCategory, data in pairs(tracked) do
+        local frame = self.frames[unitToken][drCategory]
+        if data.expirationTime and GetTime() < data.expirationTime then
+            if frame then
+                local categoryIcon = self.db.profile.units[unitToken].categories[drCategory].icon
+                local iconTexture
+
+                if categoryIcon == "dynamic" then
+                    local spellInfo = C_Spell.GetSpellInfo(data.lastSpellID)
+                    iconTexture = spellInfo and spellInfo.originalIconID
+                else
+                    local spellInfo = C_Spell.GetSpellInfo(categoryIcon)
+                    iconTexture = spellInfo and spellInfo.originalIconID
+                end
+
+                if iconTexture then
+                    frame.icon:SetTexture(iconTexture)
+                    frame.active = true
+                    frame.icon:Show()
+                    local remaining = data.expirationTime - GetTime()
+                    print(data.startTime)
+                    frame.cooldown:SetCooldown(data.startTime, remaining)
+                    self:UpdateFrame()
+                end
+            end
+        end
+    end
+end
+
+
 function Icons:GetUnitToken(unitGUID)
     local unitTokens = {
         "player", "target", "focus",
@@ -207,23 +257,31 @@ end
 
 function Icons:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
     -- Table for storing all DRs
-    local trackedPlayers = {}
+    local trackedPlayers = self.trackedPlayers
 
     -- Create or update DR tables for unit
     trackedPlayers[unitGUID] = trackedPlayers[unitGUID] or {}
     trackedPlayers[unitGUID][drCategory] = trackedPlayers[unitGUID][drCategory] or {}
 
     local data = trackedPlayers[unitGUID][drCategory]
+    data.lastSpellID = spellID
+
+    local time = GetTime()
+    data.startTime = time
+    data.resetTime = DRList:GetResetTime(drCategory)
+
+    -- Set DR category expiration time
+    data.expirationTime = data.startTime + data.resetTime
 
     -- Set how many times the DR category has been applied so far
-    if data.diminished == nil or GetTime() >= (data.expirationTime or 0) then -- is nil or DR expired
+    if data.diminished == nil or time >= (data.expirationTime or 0) then -- is nil or DR expired
         data.diminished = 1
     else
         data.diminished = DRList:NextDR(data.diminished, drCategory)
     end
 
-    -- Set DR category expiration time
-    data.expirationTime = GetTime() + DRList:GetResetTime(drCategory)
+    self:ShowDRTimer(drCategory, unitGUID)
+end
 
     -- Do your stuff here, start a frame timer, etc.
     local unitTokens = self:GetUnitToken(unitGUID)

@@ -14,7 +14,7 @@ function DRT:GetOptions()
 					self:TestModules()
 				end
 			},
-			general = {
+			--[[ general = {
 				type = "group",
 				name = "General",
 				desc = "General settings",
@@ -31,7 +31,7 @@ function DRT:GetOptions()
 						}
 					}
 				}
-			},
+			}, ]]
 		}
 	}
 

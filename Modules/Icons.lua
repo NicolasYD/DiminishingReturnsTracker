@@ -431,23 +431,55 @@ function Icons:UpdateFrame()
             frame.cooldown:SetReverse(settings.cooldownReverse)
             frame.cooldown:SetSwipeColor(0, 0, 0, settings.cooldownSwipeAlpha)
             frame.cooldown:SetDrawEdge(settings.cooldown and settings.cooldownEdge)
+
+            if settings.enabled then
+                frame:Show()
+            else
+                frame:Hide()
+            end
         end
     end
 end
 
 
 function Icons:Test()
-    if not Icons.testing then
-        Icons.testing = true
+    local function GetRandomSpell(tbl, val)
+        local keys = {}
+        for k in pairs(tbl) do
+            table.insert(keys, k)
+        end
+
+        local tried = {}
+        while #tried < #keys do
+            local i
+            repeat
+                i = math.random(#keys)
+            until not tried[i]
+
+            tried[i] = true
+            local key = keys[i]
+            if tbl[key] == val then
+                return key
+            end
+        end
+    end
+
+    local function TestIcons()
         local units = self.db.profile.units
         local categories = DRList:GetCategories()
-        local spellID = 5211
+        local spellList = DRList:GetSpells()
 
-        for unit in pairs(units) do
-            for category in pairs(categories) do
+        for category in pairs(categories) do
+            local spellID = GetRandomSpell(spellList, category)
+            for unit in pairs(units) do
                 self:StartOrUpdateDRTimer(category, unit, spellID)
             end
         end
+    end
+
+    if not Icons.testing then
+        Icons.testing = true
+        TestIcons()
     else
         Icons.testing = false
         if self.frames then

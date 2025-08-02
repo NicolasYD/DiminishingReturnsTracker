@@ -1,0 +1,37 @@
+package-as: Diminishing Returns Tracker (DRT)
+
+externals:
+  Libs/AceAddon-3.0:
+    url: https://repos.curseforge.com/wow/ace3/trunk/AceAddon-3.0
+  Libs/AceConfig-3.0:
+    url: https://repos.curseforge.com/wow/ace3/trunk/AceConfig-3.0
+  Libs/AceConsole-3.0:
+    url: https://repos.curseforge.com/wow/ace3/trunk/AceConsole-3.0
+  Libs/AceDB-3.0:
+    url: https://repos.curseforge.com/wow/ace3/trunk/AceDB-3.0
+  Libs/AceDBOptions-3.0:
+    url: https://repos.curseforge.com/wow/ace3/trunk/AceDBOptions-3.0
+  Libs/AceEvent-3.0:
+    url: https://repos.curseforge.com/wow/ace3/trunk/AceEvent-3.0
+  Libs/AceGUI-3.0:
+    url: https://repos.curseforge.com/wow/ace3/trunk/AceGUI-3.0
+  Libs/DRList-1.0:
+    url: https://github.com/wardz/DRList-1.0.git
+  Libs/LibStub:
+    url: https://repos.curseforge.com/wow/libstub/trunk
+
+embedded-libraries:
+  - aceaddon-3.0
+  - aceconfig-3.0
+  - aceconsole-3.0
+  - acedb-3.0
+  - acedboptions-3.0
+  - aceevent-3.0
+  - acegui-3.0
+  - drlist-1.0
+  - libstub
+
+ignore:
+  - Libs
+
+manual-changelog: CHANGELOG.txt

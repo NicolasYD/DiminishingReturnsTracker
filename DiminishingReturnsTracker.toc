@@ -1,5 +1,5 @@
 ## Interface: 110107
-## Title: Diminishing Returns Tracker
+## Title: Diminishing Returns Tracker (DRT)
 ## IconTexture: Interface/Icons/Ability_rogue_kidneyshot
 ## Notes: Track and display diminishing returns of crowd control abilities
 ## Author: Pharmac1st

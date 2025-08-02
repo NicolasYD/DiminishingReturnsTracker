@@ -48,3 +48,14 @@ end
 function DRT:OpenOptions()
     LibStub("AceConfigDialog-3.0"):Open("DRT")
 end
+
+
+function DRT:TestModules()
+    for name, module in self:IterateModules() do
+        if type(module.Test) == "function" then
+            module:Test()
+        else
+            return
+        end
+    end
+end

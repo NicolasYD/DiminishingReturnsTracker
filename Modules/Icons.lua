@@ -155,6 +155,8 @@ end
 
 
 function Icons:COMBAT_LOG_EVENT_UNFILTERED()
+    if Icons.testing then return end
+
     local _, eventType, _, _, _, _, _, destGUID, _, destFlags, _, spellID, _, _, auraType = CombatLogGetCurrentEventInfo()
 
     -- Check all debuffs found in the combat log
@@ -191,6 +193,8 @@ end
 
 
 function Icons:PLAYER_TARGET_CHANGED()
+    if Icons.testing then return end
+
     local targetGUID = UnitGUID("target")
     if not targetGUID then return end
 
@@ -290,7 +294,12 @@ function Icons:ShowDRTimer(drCategory, unitGUID)
     -- Do your stuff here, start a frame timer, etc.
     local trackedPlayers = self.trackedPlayers
     local data = trackedPlayers[unitGUID][drCategory]
-    local unitTokens = self:GetUnitTokens(unitGUID)
+    local unitTokens
+    if Icons.testing then
+        unitTokens = {unitGUID}
+    else
+        unitTokens = self:GetUnitTokens(unitGUID)
+    end
 
     for _, unitToken in ipairs(unitTokens) do
         local frame = self.frames[unitToken][drCategory]
@@ -422,6 +431,31 @@ function Icons:UpdateFrame()
             frame.cooldown:SetReverse(settings.cooldownReverse)
             frame.cooldown:SetSwipeColor(0, 0, 0, settings.cooldownSwipeAlpha)
             frame.cooldown:SetDrawEdge(settings.cooldown and settings.cooldownEdge)
+        end
+    end
+end
+
+
+function Icons:Test()
+    if not Icons.testing then
+        Icons.testing = true
+        local units = self.db.profile.units
+        local categories = DRList:GetCategories()
+        local spellID = 5211
+
+        for unit in pairs(units) do
+            for category in pairs(categories) do
+                self:StartOrUpdateDRTimer(category, unit, spellID)
+            end
+        end
+    else
+        Icons.testing = false
+        if self.frames then
+            for unit in pairs(self.frames) do
+                for category in pairs(self.frames[unit]) do
+                    self.frames[unit][category]:Hide()
+                end
+            end
         end
     end
 end

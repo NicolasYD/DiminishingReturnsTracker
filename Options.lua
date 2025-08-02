@@ -11,7 +11,7 @@ function DRT:GetOptions()
 				name = "Toggle Test Mode",
 				order = 1,
 				func = function()
-					-- test mode function
+					self:TestModules()
 				end
 			},
 			general = {

@@ -132,7 +132,10 @@ end
 function Icons:CreateFrame(unit, category)
     self.frames = self.frames or {}
     self.frames[unit] = self.frames[unit] or {}
-    self.frames[unit][category] = self.frames[unit][category] or {}
+
+    if self.frames[unit][category] then
+        return
+    end
 
     local frame = CreateFrame("Frame", unit..category, UIParent)
     self.frames[unit][category] = frame
@@ -140,8 +143,6 @@ function Icons:CreateFrame(unit, category)
     -- Icon texture
     frame.icon = frame:CreateTexture(nil, "BACKGROUND")
     frame.icon:SetAllPoints()
-
-    frame.icon:SetTexture("Interface\\Icons\\INV_Jewelry_Necklace_38") -- set texture for development purposes (delete later)
 
     -- Cooldown spiral
     frame.cooldown = CreateFrame("Cooldown", nil, frame, "CooldownFrameTemplate")
@@ -222,12 +223,13 @@ function Icons:PLAYER_TARGET_CHANGED()
                 end
 
                 if iconTexture then
+                    frame:Show()
                     frame.icon:SetTexture(iconTexture)
                     frame.active = true
-                    frame.icon:Show()
-                    local remaining = data.expirationTime - GetTime()
-                    print(data.startTime)
-                    frame.cooldown:SetCooldown(data.startTime, remaining)
+                    local duration = data.expirationTime - GetTime()
+                    frame.cooldown:Clear()
+                    frame.cooldown:SetCooldown(data.startTime, data.resetTime)
+                    self:ResetDRTimer(targetGUID, drCategory, unitToken, duration)
                     self:UpdateFrame()
                 end
             end
@@ -236,7 +238,7 @@ function Icons:PLAYER_TARGET_CHANGED()
 end
 
 
-function Icons:GetUnitToken(unitGUID)
+function Icons:GetUnitTokens(unitGUID)
     local unitTokens = {
         "player", "target", "focus",
         "party1", "party2", "party3", "party4",
@@ -283,32 +285,74 @@ function Icons:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
     self:ShowDRTimer(drCategory, unitGUID)
 end
 
+
+function Icons:ShowDRTimer(drCategory, unitGUID)
     -- Do your stuff here, start a frame timer, etc.
-    local unitTokens = self:GetUnitToken(unitGUID)
+    local trackedPlayers = self.trackedPlayers
+    local data = trackedPlayers[unitGUID][drCategory]
+    local unitTokens = self:GetUnitTokens(unitGUID)
+
     for _, unitToken in ipairs(unitTokens) do
-        print(unitToken)
         local frame = self.frames[unitToken][drCategory]
         local categoryIcon = self.db.profile.units[unitToken].categories[drCategory].icon
 
+        local iconTexture
         if categoryIcon == "dynamic" then
-            local spellInfo = C_Spell.GetSpellInfo(spellID)
-            frame.icon:SetTexture(spellInfo.originalIconID)
+            local spellInfo = C_Spell.GetSpellInfo(data.lastSpellID)
+            iconTexture = spellInfo.originalIconID
         else
             local spellInfo = C_Spell.GetSpellInfo(categoryIcon)
-            frame.icon:SetTexture(spellInfo.originalIconID)
+            iconTexture = spellInfo.originalIconID
         end
 
-        frame.active = true
-        frame.cooldown:SetCooldown(GetTime(), 18)
-        self:UpdateFrame()
-    end
 
-    -- Then make sure to delete the category data after 18 seconds (DRList:GetResetTime()).
-    -- You might also want to delete all data on UNIT_DIED and loading screen events.
-    --
-    -- trackedPlayers[unitGUID] can now be referenced in future unit events, e.g 'PLAYER_TARGET_CHANGED',
-    -- but make sure to check the expiration time per category & delete any expired data if needed.
+        frame:Show()
+        frame.active = true
+
+        frame.icon:SetTexture(iconTexture)
+
+        frame.cooldown:SetCooldown(data.startTime, data.resetTime)
+        self:UpdateFrame()
+        self:ResetDRTimer(unitGUID, drCategory, unitToken, data.resetTime)
+    end
 end
+
+
+function Icons:ResetDRTimer(unitGUID, drCategory, unitToken, resetIn)
+    local trackedPlayers = self.trackedPlayers
+    local data = trackedPlayers[unitGUID][drCategory]
+    local frame = self.frames[unitToken][drCategory]
+
+    if not frame then return end
+
+    -- Remove any existing OnUpdate script
+    frame:SetScript("OnUpdate", nil)
+
+    -- Store expiration time
+    local expirationTime = GetTime() + resetIn
+    frame.expirationTime = expirationTime
+
+    frame:SetScript("OnUpdate", function(self)
+        if GetTime() >= data.expirationTime then
+            self:SetScript("OnUpdate", nil)
+            self.active = false
+            self:Hide()
+            self.cooldown:Clear()
+
+            -- Clear the tracked DR data
+            local trackedData = trackedPlayers[unitGUID]
+            if trackedData then
+                trackedData[drCategory] = nil
+                if next(trackedData) == nil then
+                    trackedPlayers[unitGUID] = nil
+                end
+            end
+
+            Icons:UpdateFrame()
+        end
+    end)
+end
+
 
 
 function Icons:UpdateFrame()
@@ -378,12 +422,6 @@ function Icons:UpdateFrame()
             frame.cooldown:SetReverse(settings.cooldownReverse)
             frame.cooldown:SetSwipeColor(0, 0, 0, settings.cooldownSwipeAlpha)
             frame.cooldown:SetDrawEdge(settings.cooldown and settings.cooldownEdge)
-
-            if settings.enabled then
-                frame:Show()
-            else
-                frame:Hide()
-            end
         end
     end
 end

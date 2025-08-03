@@ -391,12 +391,14 @@ function Icons:UpdateFrame()
         for category, frame in pairs(self.frames[unit]) do
             frame.enabled = self.db.profile.units[unit].categories[category].enabled
 
-            if frame.active then
+            if frame.active and frame.enabled then
                 table.insert(activeFrames, {
                     category = category,
                     frame = frame,
                     priority = self.db.profile.units[unit].categories[category].priority,
                 })
+            else
+                frame:Hide()
             end
         end
 

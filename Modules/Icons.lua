@@ -17,6 +17,7 @@ end
 
 function Icons:OnEnable()
     local drCategories = DRList:GetCategories()
+    drCategories["taunt"] = nil
     for unit in pairs(self.db.profile.units) do
         for drCategory in pairs(drCategories) do
             self:CreateFrame(unit, drCategory)
@@ -46,50 +47,44 @@ function Icons:SetupDB()
             enabled = false,
         },
         stun = {
-            priority = 8,
+            priority = 7,
             order = 1,
             icon = "dynamic",
             enabled = true,
         },
         disorient = {
-            priority = 7,
+            priority = 6,
             order = 2,
             icon = "dynamic",
             enabled = true,
         },
         incapacitate = {
-            priority = 6,
+            priority = 5,
             order = 3,
             icon = "dynamic",
             enabled = true,
         },
         silence = {
-            priority = 5,
+            priority = 4,
             order = 4,
             icon = "dynamic",
             enabled = false,
         },
         disarm = {
-            priority = 4,
+            priority = 3,
             order = 5,
             icon = "dynamic",
             enabled = false,
         },
         knockback = {
-            priority = 3,
+            priority = 2,
             order = 6,
             icon = "dynamic",
             enabled = false,
         },
         root = {
-            priority = 2,
-            order = 7,
-            icon = "dynamic",
-            enabled = false,
-        },
-        taunt = {
             priority = 1,
-            order = 8,
+            order = 7,
             icon = "dynamic",
             enabled = false,
         },
@@ -113,7 +108,9 @@ function Icons:SetupDB()
                     cooldownReverse = true,
                     cooldownSwipeAlpha = 0.5,
                     cooldownEdge = true,
-                    categories = defaultCategories
+                    categories = defaultCategories,
+                    coloredBorder = true,
+                    borderSize = 2,
                 },
                 target = {
                     enabled = true,
@@ -130,7 +127,9 @@ function Icons:SetupDB()
                     cooldownReverse = true,
                     cooldownSwipeAlpha = 0.5,
                     cooldownEdge = true,
-                    categories = defaultCategories
+                    categories = defaultCategories,
+                    coloredBorder = true,
+                    borderSize = 2,
                 },
             },
         },
@@ -160,6 +159,43 @@ function Icons:CreateFrame(unit, category)
     -- Text label
     frame.text = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     frame.text:SetPoint("BOTTOMRIGHT", -2, 2)
+
+    -- Border
+    frame.border = CreateColoredBorder(frame)
+end
+
+
+function CreateColoredBorder(parent, color, size)
+    size = size or 1
+    color = color or {1, 1, 1, 1}
+
+    local borders = {}
+
+    borders.top = parent:CreateTexture(nil, "OVERLAY")
+    borders.top:SetColorTexture(unpack(color))
+    borders.top:SetPoint("TOPLEFT", -size, size)
+    borders.top:SetPoint("TOPRIGHT", size, size)
+    borders.top:SetHeight(size)
+
+    borders.bottom = parent:CreateTexture(nil, "OVERLAY")
+    borders.bottom:SetColorTexture(unpack(color))
+    borders.bottom:SetPoint("BOTTOMLEFT", -size, -size)
+    borders.bottom:SetPoint("BOTTOMRIGHT", size, -size)
+    borders.bottom:SetHeight(size)
+
+    borders.left = parent:CreateTexture(nil, "OVERLAY")
+    borders.left:SetColorTexture(unpack(color))
+    borders.left:SetPoint("TOPLEFT", -size, size)
+    borders.left:SetPoint("BOTTOMLEFT", -size, -size)
+    borders.left:SetWidth(size)
+
+    borders.right = parent:CreateTexture(nil, "OVERLAY")
+    borders.right:SetColorTexture(unpack(color))
+    borders.right:SetPoint("TOPRIGHT", size, size)
+    borders.right:SetPoint("BOTTOMRIGHT", size, -size)
+    borders.right:SetWidth(size)
+
+    return borders
 end
 
 
@@ -290,7 +326,8 @@ function Icons:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
 
     -- Set how many times the DR category has been applied so far
     if data.diminished == nil or time >= (data.expirationTime or 0) then -- is nil or DR expired
-        data.diminished = 1
+        local duration = 1
+        data.diminished = DRList:NextDR(duration, drCategory)
     else
         data.diminished = DRList:NextDR(data.diminished, drCategory)
     end
@@ -330,6 +367,18 @@ function Icons:ShowDRTimer(drCategory, unitGUID)
         frame.icon:SetTexture(iconTexture)
 
         frame.cooldown:SetCooldown(data.startTime, data.resetTime)
+
+        local diminished = data.diminished
+        local diminishedColor = {
+            [0.5] = {0, 1, 0, 1},
+            [0.25] = {1, 0.5, 0, 1},
+            [0] = {1, 0, 0, 1},
+        }
+        local color = diminishedColor[diminished] or {1,1,1,1}
+        for _, tex in pairs(frame.border) do
+            tex:SetColorTexture(unpack(color))
+        end
+
         self:UpdateFrame()
         self:ResetDRTimer(unitGUID, drCategory, unitToken, data.resetTime)
     end
@@ -445,6 +494,20 @@ function Icons:UpdateFrame()
             frame.cooldown:SetSwipeColor(0, 0, 0, settings.cooldownSwipeAlpha)
             frame.cooldown:SetDrawEdge(settings.cooldown and settings.cooldownEdge)
 
+            local borderSize = self.db.profile.units[unit].borderSize
+            for name, tex in pairs(frame.border) do
+                if name == "top" or name == "bottom" then
+                    tex:SetHeight(borderSize)
+                elseif name == "left" or name == "right" then
+                    tex:SetWidth(borderSize)
+                end
+                if settings.coloredBorder then
+                    tex:Show()
+                else
+                    tex:Hide()
+                end
+            end
+
             if settings.enabled and frame.enabled then
                 frame:Show()
             else
@@ -480,6 +543,7 @@ function Icons:Test()
     local function TestIcons()
         local units = self.db.profile.units
         local categories = DRList:GetCategories()
+        categories["taunt"] = nil
         local spellList = DRList:GetSpells()
 
         for category in pairs(categories) do
@@ -542,7 +606,7 @@ function Icons:BuildGeneralOptions(unit)
                 type = "header",
                 name = "Cooldown Options",
                 width = "full",
-                order = 1,
+                order = 10,
                 },
                 cooldown = {
                     type = "toggle",
@@ -555,7 +619,7 @@ function Icons:BuildGeneralOptions(unit)
                         self.db.profile.units[unit].cooldown = value
                         self:UpdateFrame()
                     end,
-                    order = 2,
+                    order = 20,
                 },
                 cooldownReverse = {
                     type = "toggle",
@@ -568,7 +632,7 @@ function Icons:BuildGeneralOptions(unit)
                         self.db.profile.units[unit].cooldownReverse = value
                         self:UpdateFrame()
                     end,
-                    order = 3,
+                    order = 30,
                 },
                 cooldownEdge = {
                     type = "toggle",
@@ -581,13 +645,13 @@ function Icons:BuildGeneralOptions(unit)
                         self.db.profile.units[unit].cooldownEdge = value
                         self:UpdateFrame()
                     end,
-                    order = 4,
+                    order = 40,
                 },
                 separator1 = {
                     type = "description",
                     name = "",
                     width = "full",
-                    order = 5,
+                    order = 50,
                 },
                 cooldownSwipeAlpha = {
                     type = "range",
@@ -603,19 +667,32 @@ function Icons:BuildGeneralOptions(unit)
                         self.db.profile.units[unit].cooldownSwipeAlpha = value
                         self:UpdateFrame()
                     end,
-                    order = 6,
+                    order = 60,
                 },
                 separator2 = {
                     type = "description",
                     name = "",
                     width = "full",
-                    order = 7,
+                    order = 70,
                 },
                 header2 = {
                 type = "header",
                 name = "Icon Options",
                 width = "full",
-                order = 8,
+                order = 80,
+                },
+                coloredBorder = {
+                    type = "toggle",
+                    name = "Colored Border",
+                    desc = "Show a colored border that indicates the DR level",
+                    get = function()
+                        return self.db.profile.units[unit].coloredBorder
+                    end,
+                    set = function(_, value)
+                        self.db.profile.units[unit].coloredBorder = value
+                        self:UpdateFrame()
+                    end,
+                    order = 90,
                 },
                 cropIcons = {
                     type = "toggle",
@@ -628,13 +705,29 @@ function Icons:BuildGeneralOptions(unit)
                         self.db.profile.units[unit].cropIcons = value
                         self:UpdateFrame()
                     end,
-                    order = 9,
+                    order = 90,
                 },
                 separator3 = {
                     type = "description",
                     name = "",
                     width = "full",
-                    order = 10,
+                    order = 100,
+                },
+                borderSize = {
+                    type = "range",
+                    name = "Colored Border Size",
+                    desc = "",
+                    min = 1,
+                    max = 20,
+                    step = 1,
+                    get = function ()
+                        return self.db.profile.units[unit].borderSize
+                    end,
+                    set = function (_, value)
+                        self.db.profile.units[unit].borderSize = value
+                        self:UpdateFrame()
+                    end,
+                    order = 109,
                 },
                 frameSize = {
                     type = "range",
@@ -650,7 +743,7 @@ function Icons:BuildGeneralOptions(unit)
                         self.db.profile.units[unit].frameSize = value
                         self:UpdateFrame()
                     end,
-                    order = 11,
+                    order = 110,
                 },
             },
         },
@@ -837,6 +930,7 @@ function Icons:BuildDiminishingReturnsOptions(unit)
     }
 
     local drCategories = DRList:GetCategories()
+    drCategories["taunt"] = nil
     local count = 0
     for _ in pairs(drCategories) do
         count = count + 1
@@ -986,6 +1080,7 @@ function Icons:GetOptions()
     }
 
     local drCategories = DRList:GetCategories()
+    drCategories["taunt"] = nil
     local count = 0
     for _ in pairs(drCategories) do
         count = count + 1

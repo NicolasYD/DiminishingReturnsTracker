@@ -1,2 +1,5 @@
+v11.1.7.2-alpha
+- Expanded functionality.
+
 v11.1.7.1-alpha
 - Alpha version.

@@ -499,398 +499,6 @@ function Icons:ResetModule()
 end
 
 
-function Icons:BuildIconOptions(unit)
-    local anchorPointValues = {
-        TOP = "TOP",
-        TOPLEFT = "TOPLEFT",
-        TOPRIGHT = "TOPRIGHT",
-        LEFT = "LEFT",
-        CENTER = "CENTER",
-        RIGHT = "RIGHT",
-        BOTTOM = "BOTTOM",
-        BOTTOMLEFT = "BOTTOMLEFT",
-        BOTTOMRIGHT = "BOTTOMRIGHT",
-    }
-
-    local name = string.upper(string.sub(unit, 1, 1)) .. string.sub(unit, 2)
-
-    local iconOptions = {
-        type = "group",
-        name = name,
-        desc = "DR tracking for " .. unit .. " frame",
-        order = 2,
-        args = {
-            enabled = {
-                type = "toggle",
-                name = "Enable",
-                desc = "Enable DR tracking for this frame",
-                get = function ()
-                    return self.db.profile.units[unit].enabled
-                end,
-                set = function (_, value)
-                    self.db.profile.units[unit].enabled = value
-                    self:UpdateFrame()
-                end,
-                disabled = function ()
-                    return not self:IsEnabled()
-                end,
-                order = 1,
-            },
-            widget = {
-                type = "group",
-                name = "Widget",
-                desc = "Widget settings",
-                inline = true,
-                disabled = function ()
-                    return not self:IsEnabled() or not self.db.profile.units[unit].enabled
-                end,
-                order = 2,
-                args = {
-                    header1 = {
-                    type = "header",
-                    name = "Cooldown Options",
-                    width = "full",
-                    order = 1,
-                    },
-                    cooldown = {
-                        type = "toggle",
-                        name = "Cooldown Animation",
-                        desc = "",
-                        get = function()
-                            return self.db.profile.units[unit].cooldown
-                        end,
-                        set = function(_, value)
-                            self.db.profile.units[unit].cooldown = value
-                            self:UpdateFrame()
-                        end,
-                        order = 2,
-                    },
-                    cooldownReverse = {
-                        type = "toggle",
-                        name = "Cooldown Reverse",
-                        desc = "",
-                        get = function()
-                            return self.db.profile.units[unit].cooldownReverse
-                        end,
-                        set = function(_, value)
-                            self.db.profile.units[unit].cooldownReverse = value
-                            self:UpdateFrame()
-                        end,
-                        order = 3,
-                    },
-                    cooldownEdge = {
-                        type = "toggle",
-                        name = "Cooldown Edge",
-                        desc = "",
-                        get = function()
-                            return self.db.profile.units[unit].cooldownEdge
-                        end,
-                        set = function(_, value)
-                            self.db.profile.units[unit].cooldownEdge = value
-                            self:UpdateFrame()
-                        end,
-                        order = 4,
-                    },
-                    separator1 = {
-                        type = "description",
-                        name = "",
-                        width = "full",
-                        order = 5,
-                    },
-                    cooldownSwipeAlpha = {
-                        type = "range",
-                        name = "Cooldown Swipe Alpha",
-                        desc = "",
-                        min = 0,
-                        max = 1,
-                        step = 0.1,
-                        get = function()
-                            return self.db.profile.units[unit].cooldownSwipeAlpha
-                        end,
-                        set = function(_, value)
-                            self.db.profile.units[unit].cooldownSwipeAlpha = value
-                            self:UpdateFrame()
-                        end,
-                        order = 6,
-                    },
-                    separator2 = {
-                        type = "description",
-                        name = "",
-                        width = "full",
-                        order = 7,
-                    },
-                    header2 = {
-                    type = "header",
-                    name = "Icon Options",
-                    width = "full",
-                    order = 8,
-                    },
-                    cropIcons = {
-                        type = "toggle",
-                        name = "Icons Border Crop",
-                        desc = "",
-                        get = function()
-                            return self.db.profile.units[unit].cropIcons
-                        end,
-                        set = function(_, value)
-                            self.db.profile.units[unit].cropIcons = value
-                            self:UpdateFrame()
-                        end,
-                        order = 9,
-                    },
-                    separator3 = {
-                        type = "description",
-                        name = "",
-                        width = "full",
-                        order = 10,
-                    },
-                    frameSize = {
-                        type = "range",
-                        name = "Icons Frame Size",
-                        desc = "",
-                        min = 0,
-                        max = 200,
-                        step = 1,
-                        get = function ()
-                            return self.db.profile.units[unit].frameSize
-                        end,
-                        set = function (_, value)
-                            self.db.profile.units[unit].frameSize = value
-                            self:UpdateFrame()
-                        end,
-                        order = 11,
-                    },
-                },
-            },
-            position = {
-                type = "group",
-                name = "Position",
-                desc = "Position settings",
-                inline = true,
-                disabled = function ()
-                    return not self:IsEnabled() or not self.db.profile.units[unit].enabled
-                end,
-                order = 3,
-                args = {
-                    growIcons = {
-                        type = "select",
-                        name = "Grow Direction",
-                        desc = "Choose in which direction new icons will be shown",
-                        values = {
-                            ["Left"] = "Left",
-                            ["Right"] = "Right",
-                            ["Up"] = "Up",
-                            ["Down"] = "Down"
-                        },
-                        get = function()
-                            return self.db.profile.units[unit].growIcons
-                        end,
-                        set = function(_, value)
-                            self.db.profile.units[unit].growIcons = value
-                            self:UpdateFrame()
-                        end,
-                        order = 5,
-                    },
-                    iconsSpacing = {
-                        type = "range",
-                        name = "Icon Spacing",
-                        desc = "Adjust the gap between the icons",
-                        min = 0,
-                        max = 200,
-                        step = 1,
-                        get = function ()
-                            return self.db.profile.units[unit].iconsSpacing
-                        end,
-                        set = function (_, value)
-                            self.db.profile.units[unit].iconsSpacing = value
-                            self:UpdateFrame()
-                        end,
-                        order = 6,
-                    },
-                    separator1 = {
-                        type = "description",
-                        name = "",
-                        width = "full",
-                        order = 10,
-                    },
-                    anchorTo = {
-                        type = "input",
-                        name = "Anchor Frame Name",
-                        desc = "Enter the name of the frame to anchor this icon to.",
-                        get = function()
-                            return self.db.profile.units[unit].anchorTo or ""
-                        end,
-                        set = function(_, value)
-                            self.db.profile.units[unit].anchorTo = value
-                            self:UpdateFrame()
-                        end,
-                        order = 15,
-                    },
-                    separator2 = {
-                        type = "description",
-                        name = "",
-                        width = "full",
-                        order = 20,
-                    },
-                    anchorPoint = {
-                        type = "select",
-                        name = "Anchor Frame Point",
-                        desc = "Which point of the anchor frame to anchor to.",
-                        values = anchorPointValues,
-                        get = function()
-                            return self.db.profile.units[unit].anchorPoint
-                        end,
-                        set = function(_, value)
-                            self.db.profile.units[unit].anchorPoint = value
-                            self:UpdateFrame()
-                        end,
-                        order = 25,
-                    },
-                    iconPoint = {
-                        type = "select",
-                        name = "Icon Frame Point",
-                        desc = "Which point of the icon frame to anchor to.",
-                        values = anchorPointValues,
-                        get = function()
-                            return self.db.profile.units[unit].iconPoint
-                        end,
-                        set = function(_, value)
-                            self.db.profile.units[unit].iconPoint = value
-                            self:UpdateFrame()
-                        end,
-                        order = 30,
-                    },
-                    separator3 = {
-                        type = "description",
-                        name = "",
-                        width = "full",
-                        order = 35,
-                    },
-                    offsetX = {
-                        type = "range",
-                        name = "Icon Frame Offset X",
-                        desc = "",
-                        min = -100,
-                        max = 100,
-                        step = 1,
-                        get = function ()
-                            return self.db.profile.units[unit].offsetX
-                        end,
-                        set = function (_, value)
-                            self.db.profile.units[unit].offsetX = value
-                            self:UpdateFrame()
-                        end,
-                        order = 40,
-                    },
-                    offsetY = {
-                        type = "range",
-                        name = "Icon Frame Offset Y",
-                        desc = "",
-                        min = -100,
-                        max = 100,
-                        step = 1,
-                        get = function ()
-                            return self.db.profile.units[unit].offsetY
-                        end,
-                        set = function (_, value)
-                            self.db.profile.units[unit].offsetY = value
-                            self:UpdateFrame()
-                        end,
-                        order = 45,
-                    },
-                }
-            }
-        }
-    }
-
-    return iconOptions
-end
-
-
-function Icons:BuildDrIconOptions(category, name, unit)
-    local spellList = DRList:GetSpells()
-
-    local iconTable = {
-        ["dynamic"] = "|TInterface\\ICONS\\INV_Misc_QuestionMark:16:16|t Dynamic",
-    }
-    local sortingTable = {
-        "dynamic",
-    }
-    local seen = {}
-
-    for spellID, drCategory in pairs(spellList) do
-        local spellInfo = C_Spell.GetSpellInfo(spellID)
-
-        if spellInfo and drCategory == category then
-            local spellName = spellInfo.name
-            local icon = spellInfo.originalIconID
-            local value = "|T" .. icon .. ":16:16|t " .. spellName
-            if not seen[value] then
-                iconTable[spellID] = value
-                table.insert(sortingTable, spellID)
-                seen[value] = "seen"
-            end
-        end
-    end
-
-    -- Sort spellIDs by spell name from iconTable value
-    table.sort(sortingTable, function(a, b)
-        if a == "dynamic" then return true end
-        if b == "dynamic" then return false end
-
-        local aText = iconTable[a]:match("|t%s*(.+)")
-        local bText = iconTable[b]:match("|t%s*(.+)")
-        return aText < bText
-    end)
-
-    local iconOptions = {
-        type = "select",
-        name = name,
-        desc = "Choose the icon that you want to display for this DR category",
-        values = iconTable,
-        sorting = sortingTable,
-        get = function()
-            return self.db.profile.units[unit].categories[category].icon
-        end,
-        set = function(_, value)
-            self.db.profile.units[unit].categories[category].icon = value
-            self:UpdateFrame()
-        end,
-        disabled = function ()
-            return not self:IsEnabled() or not self.db.profile.units[unit].enabled
-        end,
-        order = 100 + self.db.profile.units[unit].categories[category].order,
-    }
-
-    return iconOptions
-end
-
-
-function Icons:BuildDrOptions(category, name, unit, totalCategories)
-    local drOptions = {
-        type = "range",
-        name = name,
-        desc = "",
-        min = 0,
-        max = totalCategories,
-        step = 1,
-        get = function ()
-            return self.db.profile.units[unit].categories[category].priority
-        end,
-        set = function (_, value)
-            self.db.profile.units[unit].categories[category].priority = value
-            self:UpdateFrame()
-        end,
-        disabled = function ()
-            return not self:IsEnabled() or not self.db.profile.units[unit].enabled
-        end,
-        order = 200 + self.db.profile.units[unit].categories[category].order,
-    }
-
-    return drOptions
-end
-
-
 function Icons:BuildGeneralOptions(unit)
     local anchorPointValues = {
         TOP = "TOP",
@@ -907,22 +515,6 @@ function Icons:BuildGeneralOptions(unit)
     local name = string.upper(string.sub(unit, 1, 1)) .. string.sub(unit, 2)
 
     local generalOptions = {
-        enabled = {
-            type = "toggle",
-            name = "Enable",
-            desc = "Enable DR tracking for this frame",
-            get = function ()
-                return self.db.profile.units[unit].enabled
-            end,
-            set = function (_, value)
-                self.db.profile.units[unit].enabled = value
-                self:UpdateFrame()
-            end,
-            disabled = function ()
-                return not self:IsEnabled()
-            end,
-            order = 1,
-        },
         widget = {
             type = "group",
             name = "Widget",
@@ -1195,7 +787,7 @@ end
 
 
 function Icons:BuildDiminishingReturnsOptions(unit)
-    local iconOptions = {
+    local diminishingReturnsOptions = {
         separator1 = {
             type = "description",
             name = "",
@@ -1262,7 +854,7 @@ function Icons:BuildDiminishingReturnsOptions(unit)
             return aText < bText
         end)
 
-        iconOptions[category .. "Icon"] = {
+        diminishingReturnsOptions[category .. "Icon"] = {
             type = "select",
             name = categoryName,
             desc = "Choose the icon that you want to display for this DR category",
@@ -1281,7 +873,7 @@ function Icons:BuildDiminishingReturnsOptions(unit)
             order = 100 + self.db.profile.units[unit].categories[category].order,
         }
 
-        iconOptions[category .. "Priority"] = {
+        diminishingReturnsOptions[category .. "Priority"] = {
             type = "range",
             name = categoryName,
             desc = "",
@@ -1302,7 +894,7 @@ function Icons:BuildDiminishingReturnsOptions(unit)
         }
     end
 
-    return iconOptions
+    return diminishingReturnsOptions
 end
 
 
@@ -1349,18 +941,6 @@ function Icons:GetOptions()
                 width = "full",
                 order = 3
             },
-            general = {
-                type = "group",
-                name = "General",
-                order = 1,
-                args = {}
-            },
-            diminishingReturns = {
-                type = "group",
-                name = "DRs",
-                order = 2,
-                args = {}
-            },
         }
     }
 
@@ -1369,6 +949,7 @@ function Icons:GetOptions()
     for _ in pairs(drCategories) do
         count = count + 1
     end
+
     for unit in pairs(self.db.profile.units) do
         local name = string.upper(string.sub(unit, 1, 1)) .. string.sub(unit, 2)
 
@@ -1378,16 +959,32 @@ function Icons:GetOptions()
             order = 2,
             childGroups = "tab",
             args = {
+                enabled = {
+                    type = "toggle",
+                    name = "Enable",
+                    desc = "Enable DR tracking for this unit",
+                    get = function ()
+                        return self.db.profile.units[unit].enabled
+                    end,
+                    set = function (_, value)
+                        self.db.profile.units[unit].enabled = value
+                        self:UpdateFrame()
+                    end,
+                    disabled = function ()
+                        return not self:IsEnabled()
+                    end,
+                    order = 1,
+                },
                 general = {
                     type = "group",
                     name = "General",
-                    order = 1,
+                    order = 2,
                     args = {}
                 },
                 diminishingReturns = {
                     type = "group",
                     name = "DRs",
-                    order = 2,
+                    order = 3,
                     args = {}
                 },
             }
@@ -1395,43 +992,7 @@ function Icons:GetOptions()
 
         options.args[unit].args.general.args = self:BuildGeneralOptions(unit)
         options.args[unit].args.diminishingReturns.args = self:BuildDiminishingReturnsOptions(unit)
-
-        options.args.general.args[unit] = self:BuildIconOptions(unit)
-        options.args.diminishingReturns.args[unit] = {
-            type = "group",
-            name = name,
-            order = 2,
-            args = {
-                separator1 = {
-                    type = "description",
-                    name = "",
-                    width = "full",
-                    order = 99,
-                },
-                header1 = {
-                    type = "header",
-                    name = "DR Category Icons",
-                    order = 100,
-                },
-                separator2 = {
-                    type = "description",
-                    name = "",
-                    width = "full",
-                    order = 199,
-                },
-                header2 = {
-                    type = "header",
-                    name = "DR Category Priority",
-                    order = 200,
-                },
-            }
-        }
-        for category, categoryName in pairs(drCategories) do
-            options.args.diminishingReturns.args[unit].args[category .. "Icon"] = self:BuildDrIconOptions(category, categoryName, unit)
-            options.args.diminishingReturns.args[unit].args[category .. "Priority"] = self:BuildDrOptions(category, categoryName, unit, count)
-        end
     end
-
 
     return options
 end

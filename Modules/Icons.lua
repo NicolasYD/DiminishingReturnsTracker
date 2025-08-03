@@ -43,46 +43,55 @@ function Icons:SetupDB()
             priority = 0,
             order = 0,
             icon = "dynamic",
+            enabled = false,
         },
         stun = {
             priority = 8,
             order = 1,
             icon = "dynamic",
+            enabled = true,
         },
         disorient = {
             priority = 7,
             order = 2,
             icon = "dynamic",
+            enabled = true,
         },
         incapacitate = {
             priority = 6,
             order = 3,
             icon = "dynamic",
+            enabled = true,
         },
         silence = {
             priority = 5,
             order = 4,
             icon = "dynamic",
+            enabled = false,
         },
         disarm = {
             priority = 4,
             order = 5,
             icon = "dynamic",
+            enabled = false,
         },
         knockback = {
             priority = 3,
             order = 6,
             icon = "dynamic",
+            enabled = false,
         },
         root = {
             priority = 2,
             order = 7,
             icon = "dynamic",
+            enabled = false,
         },
         taunt = {
             priority = 1,
             order = 8,
             icon = "dynamic",
+            enabled = false,
         },
     }
 
@@ -380,6 +389,8 @@ function Icons:UpdateFrame()
         local activeFrames = {}
 
         for category, frame in pairs(self.frames[unit]) do
+            frame.enabled = self.db.profile.units[unit].categories[category].enabled
+
             if frame.active then
                 table.insert(activeFrames, {
                     category = category,
@@ -432,7 +443,7 @@ function Icons:UpdateFrame()
             frame.cooldown:SetSwipeColor(0, 0, 0, settings.cooldownSwipeAlpha)
             frame.cooldown:SetDrawEdge(settings.cooldown and settings.cooldownEdge)
 
-            if settings.enabled then
+            if settings.enabled and frame.enabled then
                 frame:Show()
             else
                 frame:Hide()
@@ -792,23 +803,34 @@ function Icons:BuildDiminishingReturnsOptions(unit)
             type = "description",
             name = "",
             width = "full",
+            order = 98,
+        },
+         header1 = {
+            type = "header",
+            name = "Tracked DR Categories",
             order = 99,
         },
-        header1 = {
-            type = "header",
-            name = "DR Category Icons",
-            order = 100,
-        },
-        separator2 = {
+         separator2 = {
             type = "description",
             name = "",
             width = "full",
-            order = 199,
+            order = 198,
         },
         header2 = {
             type = "header",
-            name = "DR Category Priority",
-            order = 200,
+            name = "DR Category Icons",
+            order = 199,
+        },
+        separator3 = {
+            type = "description",
+            name = "",
+            width = "full",
+            order = 298,
+        },
+        header3 = {
+            type = "header",
+            name = "DR Category Priorities",
+            order = 299,
         },
     }
 
@@ -854,6 +876,23 @@ function Icons:BuildDiminishingReturnsOptions(unit)
             return aText < bText
         end)
 
+        diminishingReturnsOptions[category .. "Enabled"] = {
+            type = "toggle",
+            name = categoryName,
+            desc = "Choose the DR categories that you want to track",
+            get = function()
+                return self.db.profile.units[unit].categories[category].enabled
+            end,
+            set = function(_, value)
+                self.db.profile.units[unit].categories[category].enabled = value
+                self:UpdateFrame()
+            end,
+            disabled = function ()
+                return not self:IsEnabled() or not self.db.profile.units[unit].enabled
+            end,
+            order = 100 + self.db.profile.units[unit].categories[category].order,
+        }
+
         diminishingReturnsOptions[category .. "Icon"] = {
             type = "select",
             name = categoryName,
@@ -870,7 +909,7 @@ function Icons:BuildDiminishingReturnsOptions(unit)
             disabled = function ()
                 return not self:IsEnabled() or not self.db.profile.units[unit].enabled
             end,
-            order = 100 + self.db.profile.units[unit].categories[category].order,
+            order = 200 + self.db.profile.units[unit].categories[category].order,
         }
 
         diminishingReturnsOptions[category .. "Priority"] = {
@@ -890,7 +929,7 @@ function Icons:BuildDiminishingReturnsOptions(unit)
             disabled = function ()
                 return not self:IsEnabled() or not self.db.profile.units[unit].enabled
             end,
-            order = 200 + self.db.profile.units[unit].categories[category].order,
+            order = 300 + self.db.profile.units[unit].categories[category].order,
         }
     end
 
@@ -922,7 +961,7 @@ function Icons:GetOptions()
                         DRT:DisableModule("Icons")
                     end
                 end,
-                order = 1
+                order = 100
             },
             resetButton = {
                 type = "execute",
@@ -933,13 +972,13 @@ function Icons:GetOptions()
                 disabled = function ()
                     return not self:IsEnabled()
                 end,
-                order = 2
+                order = 200
             },
             separator1 = {
                 type = "description",
                 name = "",
                 width = "full",
-                order = 3
+                order = 300
             },
         }
     }
@@ -973,18 +1012,18 @@ function Icons:GetOptions()
                     disabled = function ()
                         return not self:IsEnabled()
                     end,
-                    order = 1,
+                    order = 100,
                 },
                 general = {
                     type = "group",
                     name = "General",
-                    order = 2,
+                    order = 200,
                     args = {}
                 },
                 diminishingReturns = {
                     type = "group",
                     name = "DRs",
-                    order = 3,
+                    order = 300,
                     args = {}
                 },
             }

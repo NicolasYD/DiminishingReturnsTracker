@@ -90,49 +90,62 @@ function Icons:SetupDB()
         },
     }
 
+    local sharedOptions = {
+        enabled = true,
+        cropIcons = true,
+        frameSize = 30,
+        iconPoint = "TOP",
+        offsetY = 5,
+        iconsSpacing = 5,
+        cooldown = true,
+        cooldownReverse = true,
+        cooldownSwipeAlpha = 0.6,
+        cooldownEdge = true,
+        cooldownNumbers = true,
+        categories = defaultCategories,
+        coloredBorder = true,
+        borderSize = 2,
+    }
+
+    -- A helper function to shallow-copy and override table keys
+    local function mergeTables(base, overrides)
+        local result = {}
+        for k,v in pairs(base) do
+            result[k] = v
+        end
+        for k,v in pairs(overrides) do
+            result[k] = v
+        end
+        return result
+    end
+
     self.db = DRT.db:RegisterNamespace("Icons", {
         profile = {
             units = {
-                player = {
-                    enabled = true,
-                    cropIcons = true,
-                    frameSize = 30,
-                    iconPoint = "TOP",
+                player = mergeTables(sharedOptions, {
                     anchorTo = "PlayerFrame",
                     anchorPoint = "TOPRIGHT",
-                    offsetX = -35,
-                    offsetY = 5,
+                    offsetX = -40,
+                    offsetY = -10,
                     growIcons = "Left",
-                    iconsSpacing = 5,
-                    cooldown = true,
-                    cooldownReverse = true,
-                    cooldownSwipeAlpha = 0.6,
-                    cooldownEdge = true,
-                    cooldownNumbers = true,
-                    categories = defaultCategories,
-                    coloredBorder = true,
-                    borderSize = 2,
-                },
-                target = {
-                    enabled = true,
-                    cropIcons = true,
-                    frameSize = 30,
-                    iconPoint = "TOP",
+                    order = 1,
+                    }),
+                target = mergeTables(sharedOptions, {
                     anchorTo = "TargetFrame",
                     anchorPoint = "TOPLEFT",
-                    offsetX = 35,
-                    offsetY = 5,
+                    offsetX = 40,
+                    offsetY = -10,
                     growIcons = "Right",
-                    iconsSpacing = 5,
-                    cooldown = true,
-                    cooldownReverse = true,
-                    cooldownSwipeAlpha = 0.6,
-                    cooldownEdge = true,
-                    cooldownNumbers = true,
-                    categories = defaultCategories,
-                    coloredBorder = true,
-                    borderSize = 2,
-                },
+                    order = 2,
+                }),
+                focus = mergeTables(sharedOptions, {
+                    enabled = false,
+                    anchorTo = "FocusFrame",
+                    anchorPoint = "TOPLEFT",
+                    offsetX = 35,
+                    growIcons = "Right",
+                    order = 3,
+                }),
             },
         },
     })
@@ -1114,7 +1127,7 @@ function Icons:GetOptions()
         options.args[unit] = {
             type = "group",
             name = name,
-            order = 2,
+            order = self.db.profile.units[unit].order,
             childGroups = "tab",
             args = {
                 enabled = {

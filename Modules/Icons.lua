@@ -106,8 +106,9 @@ function Icons:SetupDB()
                     iconsSpacing = 5,
                     cooldown = true,
                     cooldownReverse = true,
-                    cooldownSwipeAlpha = 0.5,
+                    cooldownSwipeAlpha = 0.6,
                     cooldownEdge = true,
+                    cooldownNumbers = true,
                     categories = defaultCategories,
                     coloredBorder = true,
                     borderSize = 2,
@@ -125,8 +126,9 @@ function Icons:SetupDB()
                     iconsSpacing = 5,
                     cooldown = true,
                     cooldownReverse = true,
-                    cooldownSwipeAlpha = 0.5,
+                    cooldownSwipeAlpha = 0.6,
                     cooldownEdge = true,
+                    cooldownNumbers = true,
                     categories = defaultCategories,
                     coloredBorder = true,
                     borderSize = 2,
@@ -161,7 +163,9 @@ function Icons:CreateFrame(unit, category)
     frame.text:SetPoint("BOTTOMRIGHT", -2, 2)
 
     -- Border
-    frame.border = CreateColoredBorder(frame)
+    frame.border = CreateFrame("Frame", nil, frame)
+    frame.border:SetAllPoints()
+    frame.borderTextures = CreateColoredBorder(frame.border)
 end
 
 
@@ -371,11 +375,11 @@ function Icons:ShowDRTimer(drCategory, unitGUID)
         local diminished = data.diminished
         local diminishedColor = {
             [0.5] = {0, 1, 0, 1},
-            [0.25] = {1, 0.5, 0, 1},
+            [0.25] = {1, 1, 0, 1},
             [0] = {1, 0, 0, 1},
         }
         local color = diminishedColor[diminished] or {1,1,1,1}
-        for _, tex in pairs(frame.border) do
+        for _, tex in pairs(frame.borderTextures) do
             tex:SetColorTexture(unpack(color))
         end
 
@@ -493,9 +497,14 @@ function Icons:UpdateFrame()
             frame.cooldown:SetReverse(settings.cooldownReverse)
             frame.cooldown:SetSwipeColor(0, 0, 0, settings.cooldownSwipeAlpha)
             frame.cooldown:SetDrawEdge(settings.cooldown and settings.cooldownEdge)
+            if settings.cooldownNumbers then
+                frame.cooldown:SetHideCountdownNumbers(false)
+            else
+                frame.cooldown:SetHideCountdownNumbers(true)
+            end
 
             local borderSize = self.db.profile.units[unit].borderSize
-            for name, tex in pairs(frame.border) do
+            for name, tex in pairs(frame.borderTextures) do
                 if name == "top" or name == "bottom" then
                     tex:SetHeight(borderSize)
                 elseif name == "left" or name == "right" then
@@ -646,6 +655,19 @@ function Icons:BuildGeneralOptions(unit)
                         self:UpdateFrame()
                     end,
                     order = 40,
+                },
+                cooldownNumbers = {
+                    type = "toggle",
+                    name = "Cooldown Numbers",
+                    desc = "",
+                    get = function()
+                        return self.db.profile.units[unit].cooldownNumbers
+                    end,
+                    set = function(_, value)
+                        self.db.profile.units[unit].cooldownNumbers = value
+                        self:UpdateFrame()
+                    end,
+                    order = 41,
                 },
                 separator1 = {
                     type = "description",

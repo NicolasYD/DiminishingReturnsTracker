@@ -93,9 +93,13 @@ function Icons:SetupDB()
     local sharedOptions = {
         enabled = true,
         cropIcons = true,
-        frameSize = 30,
-        iconPoint = "TOP",
-        offsetY = 5,
+        frameSize = 40,
+        anchorTo = "UIParent",
+        anchorPoint = "TOPRIGHT",
+        iconPoint = "TOPRIGHT",
+        offsetX = 0,
+        offsetY = 0,
+        growIcons = "Left",
         iconsSpacing = 5,
         cooldown = true,
         cooldownReverse = true,
@@ -105,7 +109,7 @@ function Icons:SetupDB()
         categories = defaultCategories,
         coloredBorder = true,
         drIndicator = true,
-        borderSize = 2,
+        borderSize = 1,
         customIndicator = false,
     }
 
@@ -126,27 +130,54 @@ function Icons:SetupDB()
             units = {
                 player = mergeTables(sharedOptions, {
                     anchorTo = "PlayerFrame",
-                    anchorPoint = "TOPRIGHT",
-                    offsetX = -40,
-                    offsetY = -10,
+                    offsetX = -22,
+                    offsetY = 2,
                     growIcons = "Left",
                     order = 1,
                     }),
                 target = mergeTables(sharedOptions, {
                     anchorTo = "TargetFrame",
                     anchorPoint = "TOPLEFT",
-                    offsetX = 40,
-                    offsetY = -10,
+                    iconPoint = "TOPLEFT",
+                    offsetX = 22,
+                    offsetY = -2,
                     growIcons = "Right",
                     order = 2,
                 }),
                 focus = mergeTables(sharedOptions, {
                     enabled = false,
+                    frameSize = 30,
                     anchorTo = "FocusFrame",
                     anchorPoint = "TOPLEFT",
-                    offsetX = 35,
+                    iconPoint = "TOPLEFT",
+                    offsetX = 18,
+                    offsetY = 2,
                     growIcons = "Right",
                     order = 3,
+                }),
+                party1 = mergeTables(sharedOptions, {
+                    enabled = false,
+                    frameSize = 30,
+                    anchorTo = "CompactPartyFrameMember2",
+                    order = 4,
+                }),
+                party2 = mergeTables(sharedOptions, {
+                    enabled = false,
+                    frameSize = 30,
+                    anchorTo = "CompactPartyFrameMember3",
+                    order = 5,
+                }),
+                party3 = mergeTables(sharedOptions, {
+                    enabled = false,
+                    frameSize = 30,
+                    anchorTo = "CompactPartyFrameMember4",
+                    order = 6,
+                }),
+                party4 = mergeTables(sharedOptions, {
+                    enabled = false,
+                    frameSize = 30,
+                    anchorTo = "CompactPartyFrameMember5",
+                    order = 7,
                 }),
             },
         },
@@ -272,6 +303,10 @@ function Icons:COMBAT_LOG_EVENT_UNFILTERED()
             end
         end
     end
+
+    if eventType == "UNIT_DIED" then
+        self.trackedPlayers[destGUID] = nil
+    end
 end
 
 
@@ -279,8 +314,6 @@ function Icons:PLAYER_TARGET_CHANGED()
     if Icons.testing then return end
 
     local targetGUID = UnitGUID("target")
-    if not targetGUID then return end
-
     local tracked = self.trackedPlayers and self.trackedPlayers[targetGUID]
     local unitToken = "target"
 

@@ -104,7 +104,9 @@ function Icons:SetupDB()
         cooldownNumbers = true,
         categories = defaultCategories,
         coloredBorder = true,
+        drIndicator = true,
         borderSize = 2,
+        customIndicator = false,
     }
 
     -- A helper function to shallow-copy and override table keys
@@ -171,14 +173,33 @@ function Icons:CreateFrame(unit, category)
     frame.cooldown = CreateFrame("Cooldown", nil, frame, "CooldownFrameTemplate")
     frame.cooldown:SetAllPoints()
 
-    -- Text label
-    frame.text = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    frame.text:SetPoint("BOTTOMRIGHT", -2, 2)
-
     -- Border
     frame.border = CreateFrame("Frame", nil, frame)
     frame.border:SetAllPoints()
+    frame.border:SetFrameLevel(frame.cooldown:GetFrameLevel() + 1)
     frame.borderTextures = CreateColoredBorder(frame.border)
+
+    -- DR indicator frame
+    frame.drIndicator = CreateFrame("Frame", nil, frame)
+    frame.drIndicator:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+    frame.drIndicator:SetFrameLevel(frame.border:GetFrameLevel() + 1)
+
+    -- DR indicator texture
+    frame.drIndicator.texture = frame.drIndicator:CreateTexture(nil, "OVERLAY")
+    frame.drIndicator.texture:SetAllPoints()
+    frame.drIndicator.texture:SetDrawLayer("OVERLAY", 1)
+    frame.drIndicator.texture:SetColorTexture(0, 0, 0, 1)
+
+    -- DR indicator border
+    frame.drIndicator.border = CreateFrame("Frame", nil, frame.drIndicator)
+    frame.drIndicator.border:SetAllPoints()
+    frame.drIndicator.border:SetFrameLevel(frame.drIndicator:GetFrameLevel() + 1)
+    frame.drIndicator.borderTextures = CreateColoredBorder(frame.drIndicator.border)
+
+    -- DR indicator text label
+    frame.drIndicator.text = frame.drIndicator:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    frame.drIndicator.text:SetPoint("CENTER", frame.drIndicator, "CENTER", 0, 0)
+    frame.drIndicator.text:SetDrawLayer("OVERLAY", 2)
 end
 
 
@@ -386,13 +407,28 @@ function Icons:ShowDRTimer(drCategory, unitGUID)
         frame.cooldown:SetCooldown(data.startTime, data.resetTime)
 
         local diminished = data.diminished
+        local diminishedText = {
+            [0.5] = "1",
+            [0.25] = "2",
+            [0] = "3",
+        }
         local diminishedColor = {
             [0.5] = {0, 1, 0, 1},
             [0.25] = {1, 1, 0, 1},
             [0] = {1, 0, 0, 1},
         }
+
+        local text = diminishedText[diminished] or ""
         local color = diminishedColor[diminished] or {1,1,1,1}
+
+        frame.drIndicator.text:SetText(text)
+        frame.drIndicator.text:SetTextColor(unpack(color))
+
         for _, tex in pairs(frame.borderTextures) do
+            tex:SetColorTexture(unpack(color))
+        end
+
+        for _, tex in pairs(frame.drIndicator.borderTextures) do
             tex:SetColorTexture(unpack(color))
         end
 
@@ -510,10 +546,27 @@ function Icons:UpdateFrame()
             frame.cooldown:SetReverse(settings.cooldownReverse)
             frame.cooldown:SetSwipeColor(0, 0, 0, settings.cooldownSwipeAlpha)
             frame.cooldown:SetDrawEdge(settings.cooldown and settings.cooldownEdge)
+
+            if settings.customIndicator then
+                -- Add settings for custom indicator
+            else
+                local size = 0.3 * settings.frameSize
+                local fontPath, fontSize, fontFlags = frame.drIndicator.text:GetFont()
+
+                frame.drIndicator:SetSize(size, size)
+                frame.drIndicator.text:SetFont(fontPath, size, fontFlags)
+            end
+
             if settings.cooldownNumbers then
                 frame.cooldown:SetHideCountdownNumbers(false)
             else
                 frame.cooldown:SetHideCountdownNumbers(true)
+            end
+
+            if settings.drIndicator then
+                frame.drIndicator:Show()
+            else
+                frame.drIndicator:Hide()
             end
 
             local borderSize = self.db.profile.units[unit].borderSize
@@ -582,6 +635,7 @@ function Icons:Test()
             count = count + 1
             if count == 3 then
                 Icons.trackedPlayers = {}
+                count = 0
             end
             TestIcons()
         end)
@@ -742,11 +796,24 @@ function Icons:BuildGeneralOptions(unit)
                         self.db.profile.units[unit].coloredBorder = value
                         self:UpdateFrame()
                     end,
-                    order = 90,
+                    order = 88,
+                },
+                drIndicator = {
+                    type = "toggle",
+                    name = "DR Indicator",
+                    desc = "Show an indicator for the DR level",
+                    get = function()
+                        return self.db.profile.units[unit].drIndicator
+                    end,
+                    set = function(_, value)
+                        self.db.profile.units[unit].drIndicator = value
+                        self:UpdateFrame()
+                    end,
+                    order = 89,
                 },
                 cropIcons = {
                     type = "toggle",
-                    name = "Icons Border Crop",
+                    name = "Crop Icons",
                     desc = "",
                     get = function()
                         return self.db.profile.units[unit].cropIcons

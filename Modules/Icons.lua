@@ -541,6 +541,8 @@ end
 
 
 function Icons:Test()
+    local count = 0
+
     local function GetRandomSpell(tbl, val)
         local keys = {}
         for k in pairs(tbl) do
@@ -567,6 +569,7 @@ function Icons:Test()
         local categories = DRList:GetCategories()
         categories["taunt"] = nil
         local spellList = DRList:GetSpells()
+        local reset = DRList:GetResetTime("stun")
 
         for category in pairs(categories) do
             local spellID = GetRandomSpell(spellList, category)
@@ -574,6 +577,14 @@ function Icons:Test()
                 self:StartOrUpdateDRTimer(category, unit, spellID)
             end
         end
+
+        Icons.testTimer = C_Timer.NewTimer(reset, function()
+            count = count + 1
+            if count == 3 then
+                Icons.trackedPlayers = {}
+            end
+            TestIcons()
+        end)
     end
 
     if not Icons.testing then
@@ -587,6 +598,10 @@ function Icons:Test()
                     self.frames[unit][category]:Hide()
                 end
             end
+        end
+        if Icons.testTimer then
+            Icons.testTimer:Cancel()
+            Icons.testTimer = nil
         end
     end
 end

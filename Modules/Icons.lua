@@ -419,6 +419,7 @@ function Icons:ShowDRTimer(drCategory, unitGUID)
     end
 
     for _, unitToken in ipairs(unitTokens) do
+        if not self.frames[unitToken] then return end
         local frame = self.frames[unitToken][drCategory]
         local categoryIcon = self.db.profile.units[unitToken].categories[drCategory].icon
 

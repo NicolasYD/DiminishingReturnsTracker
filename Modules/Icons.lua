@@ -316,43 +316,24 @@ function Icons:PLAYER_TARGET_CHANGED()
     local targetGUID = UnitGUID("target")
     local tracked = self.trackedPlayers and self.trackedPlayers[targetGUID]
     local unitToken = "target"
+    local targetFrames = self.frames[unitToken]
 
-    if not tracked then
-        local frames = self.frames[unitToken]
-        for _, frame in pairs(frames) do
-            if frame then
-                frame:Hide()
-            end
+    -- Hide all frames associated with "target" when the player changes target
+    for _, targetFrame in pairs(targetFrames) do
+        if targetFrame then
+            targetFrame:Hide()
         end
-        return
     end
+
+    if not tracked then return end
 
     for drCategory, data in pairs(tracked) do
         local frame = self.frames[unitToken][drCategory]
+
+        if not frame then return end
+
         if data.expirationTime and GetTime() < data.expirationTime then
-            if frame then
-                local categoryIcon = self.db.profile.units[unitToken].categories[drCategory].icon
-                local iconTexture
-
-                if categoryIcon == "dynamic" then
-                    local spellInfo = C_Spell.GetSpellInfo(data.lastSpellID)
-                    iconTexture = spellInfo and spellInfo.originalIconID
-                else
-                    local spellInfo = C_Spell.GetSpellInfo(categoryIcon)
-                    iconTexture = spellInfo and spellInfo.originalIconID
-                end
-
-                if iconTexture then
-                    frame:Show()
-                    frame.icon:SetTexture(iconTexture)
-                    frame.active = true
-                    local duration = data.expirationTime - GetTime()
-                    frame.cooldown:Clear()
-                    frame.cooldown:SetCooldown(data.startTime, data.resetTime)
-                    self:ResetDRTimer(targetGUID, drCategory, unitToken, duration)
-                    self:UpdateFrame()
-                end
-            end
+            self:ShowDRTimer(drCategory, targetGUID)
         end
     end
 end

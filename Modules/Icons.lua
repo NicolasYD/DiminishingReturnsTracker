@@ -448,44 +448,40 @@ function Icons:ShowDRTimer(drCategory, unitGUID)
         end
 
         self:UpdateFrame()
-        self:ResetDRTimer(unitGUID, drCategory, unitToken, data.resetTime)
+        self:ResetDRTimer()
     end
 end
 
 
-function Icons:ResetDRTimer(unitGUID, drCategory, unitToken, resetIn)
-    local trackedPlayers = self.trackedPlayers
-    local data = trackedPlayers[unitGUID][drCategory]
-    local frame = self.frames[unitToken][drCategory]
+function Icons:ResetDRTimer()
+    -- Create or reuse a global timer frame
+    if not Icons.DRTimerFrame then
+        Icons.DRTimerFrame = CreateFrame("Frame")
+        Icons.DRTimerFrame:SetScript("OnUpdate", function(self, elapsed)
+            local currentTime = GetTime()
+            for unitGUID, categories in pairs(Icons.trackedPlayers) do
+                local unitTokens = Icons:GetUnitTokens(unitGUID)
+                for drCategory, data in pairs(categories) do
+                    if data.expirationTime and currentTime >= data.expirationTime then
+                        for _, unitToken in ipairs(unitTokens) do
+                            local frame = Icons.frames[unitToken] and Icons.frames[unitToken][drCategory]
+                            if frame then
+                                frame:SetScript("OnUpdate", nil)
+                                frame.active = false
+                                frame:Hide()
+                                if frame.cooldown then
+                                    frame.cooldown:Clear()
+                                end
+                            end
+                        end
 
-    if not frame then return end
-
-    -- Remove any existing OnUpdate script
-    frame:SetScript("OnUpdate", nil)
-
-    -- Store expiration time
-    local expirationTime = GetTime() + resetIn
-    frame.expirationTime = expirationTime
-
-    frame:SetScript("OnUpdate", function(self)
-        if GetTime() >= data.expirationTime then
-            self:SetScript("OnUpdate", nil)
-            self.active = false
-            self:Hide()
-            self.cooldown:Clear()
-
-            -- Clear the tracked DR data
-            local trackedData = trackedPlayers[unitGUID]
-            if trackedData then
-                trackedData[drCategory] = nil
-                if next(trackedData) == nil then
-                    trackedPlayers[unitGUID] = nil
+                        Icons.trackedPlayers[unitGUID][drCategory].diminished = nil
+                        Icons:UpdateFrame()
+                    end
                 end
             end
-
-            Icons:UpdateFrame()
-        end
-    end)
+        end)
+    end
 end
 
 

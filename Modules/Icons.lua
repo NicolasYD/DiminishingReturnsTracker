@@ -31,7 +31,7 @@ function Icons:OnDisable()
     if self.frames then
         for unit in pairs(self.frames) do
             for category in pairs(self.frames[unit]) do
-                self.frames[unit][category]:Hide()
+                self.frames[unit][category]:SetAlpha(0)
             end
         end
     end
@@ -321,7 +321,7 @@ function Icons:PLAYER_TARGET_CHANGED()
     -- Hide all frames associated with "target" when the player changes target
     for _, targetFrame in pairs(targetFrames) do
         if targetFrame then
-            targetFrame:Hide()
+            targetFrame:SetAlpha(0)
         end
     end
 
@@ -414,7 +414,7 @@ function Icons:ShowDRTimer(drCategory, unitGUID)
         end
 
 
-        frame:Show()
+        frame:SetAlpha(1)
         frame.active = true
 
         frame.icon:SetTexture(iconTexture)
@@ -468,7 +468,7 @@ function Icons:ResetDRTimer()
                             if frame then
                                 frame:SetScript("OnUpdate", nil)
                                 frame.active = false
-                                frame:Hide()
+                                frame:SetAlpha(0)
                                 if frame.cooldown then
                                     frame.cooldown:Clear()
                                 end
@@ -511,7 +511,7 @@ function Icons:UpdateFrame()
                     priority = self.db.profile.units[unit].categories[category].priority,
                 })
             else
-                frame:Hide()
+                frame:SetAlpha(0)
             end
         end
 
@@ -575,9 +575,9 @@ function Icons:UpdateFrame()
             end
 
             if settings.drIndicator then
-                frame.drIndicator:Show()
+                frame.drIndicator:SetAlpha(1)
             else
-                frame.drIndicator:Hide()
+                frame.drIndicator:SetAlpha(0)
             end
 
             local borderSize = self.db.profile.units[unit].borderSize
@@ -588,16 +588,16 @@ function Icons:UpdateFrame()
                     tex:SetWidth(borderSize)
                 end
                 if settings.coloredBorder then
-                    tex:Show()
+                    tex:SetAlpha(1)
                 else
-                    tex:Hide()
+                    tex:SetAlpha(0)
                 end
             end
 
             if settings.enabled and frame.enabled then
-                frame:Show()
+                frame:SetAlpha(1)
             else
-                frame:Hide()
+                frame:SetAlpha(0)
             end
         end
     end
@@ -660,7 +660,9 @@ function Icons:Test()
         if self.frames then
             for unit in pairs(self.frames) do
                 for category in pairs(self.frames[unit]) do
-                    self.frames[unit][category]:Hide()
+                    local frame = self.frames[unit][category]
+                    frame.active = false
+                    frame:SetAlpha(0)
                 end
             end
         end

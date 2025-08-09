@@ -111,6 +111,7 @@ function Icons:SetupDB()
         customIndicator = false,
     }
 
+
     -- A helper function to shallow-copy and override table keys
     local function mergeTables(base, overrides)
         local result = {}
@@ -122,6 +123,7 @@ function Icons:SetupDB()
         end
         return result
     end
+
 
     self.db = DRT.db:RegisterNamespace("Icons", {
         profile = {
@@ -217,6 +219,7 @@ function Icons:CreateFrame(unit, category)
         return borders
     end
 
+
     self.frames = self.frames or {}
     self.frames[unit] = self.frames[unit] or {}
 
@@ -264,6 +267,26 @@ end
 function Icons:COMBAT_LOG_EVENT_UNFILTERED()
     if Icons.testing then return end
 
+
+    local function GetDebuffDuration(unitToken, spellID)
+        if not UnitExists(unitToken) then return nil end
+
+        for index = 1, 255 do
+            local aura = C_UnitAuras.GetDebuffDataByIndex(unitToken, index, "HARMFUL")
+            if not aura then
+                break
+            end
+
+            if aura.spellId == spellID then
+                local timeLeft = aura.expirationTime and (aura.expirationTime - GetTime()) or 0
+                return aura.duration, aura.expirationTime, timeLeft
+            end
+        end
+
+        return nil
+    end
+
+
     local _, eventType, _, _, _, _, _, destGUID, _, destFlags, _, spellID, _, _, auraType = CombatLogGetCurrentEventInfo()
 
     -- Check all debuffs found in the combat log
@@ -291,12 +314,42 @@ function Icons:COMBAT_LOG_EVENT_UNFILTERED()
             else
                 data.diminished = DRList:NextDR(data.diminished, drCategory)
             end
+
+            local unitTokens = self:GetUnitTokens(destGUID)
+            local debuffDuration
+            for _, unitToken in ipairs(unitTokens) do
+                debuffDuration, _, _ = GetDebuffDuration(unitToken, spellID)
+                if debuffDuration then break end
+            end
+
+            data.startTime = currentTime
+            if isPlayer then
+                data.resetTime = DRList:GetResetTime(drCategory) + (debuffDuration or 0)
+            else
+                data.resetTime = DRList:GetResetTime("npc") + (debuffDuration or 0)
+            end
+            data.expirationTime = data.startTime + data.resetTime
+            -- Trigger main DR category
+            self:StartOrUpdateDRTimer(drCategory, destGUID, spellID)
+
+            -- Trigger any shared DR categories
+            if sharedCategories then
+                for i = 1, #sharedCategories do
+                    if sharedCategories[i] ~= drCategory then
+                        self:StartOrUpdateDRTimer(sharedCategories[i], destGUID, spellID)
+                    end
+                end
+            end
         end
 
         -- The debuff has faded or refreshed, DR timer starts
         if eventType == "SPELL_AURA_REMOVED" then
             data.startTime = currentTime
-            data.resetTime = DRList:GetResetTime(drCategory)
+            if isPlayer then
+                data.resetTime = DRList:GetResetTime(drCategory)
+            else
+                data.resetTime = DRList:GetResetTime("npc")
+            end
             data.expirationTime = data.startTime + data.resetTime
 
             -- Trigger main DR category
@@ -569,6 +622,7 @@ end
 function Icons:Test()
     local count = 0
 
+
     local function GetRandomSpell(tbl, val)
         local keys = {}
         for k in pairs(tbl) do
@@ -589,6 +643,7 @@ function Icons:Test()
             end
         end
     end
+
 
     local function TestIcons()
         local units = self.db.profile.units
@@ -613,6 +668,7 @@ function Icons:Test()
             TestIcons()
         end)
     end
+
 
     if not Icons.testing then
         Icons.testing = true

@@ -614,6 +614,12 @@ function Icons:UpdateFrame()
                     tex:SetAlpha(0)
                 end
             end
+
+            if settings.enabled and frame.active then
+                frame:SetAlpha(1)
+            else
+                frame:SetAlpha(0)
+            end
         end
     end
 end

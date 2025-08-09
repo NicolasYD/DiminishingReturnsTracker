@@ -269,22 +269,43 @@ function Icons:COMBAT_LOG_EVENT_UNFILTERED()
     -- Check all debuffs found in the combat log
     if auraType == "DEBUFF" then
         -- Get the DR category or exit immediately if current debuff doesn't have a DR
-        local category, sharedCategories = DRList:GetCategoryBySpellID(spellID)
-        if not category then return end
+        local drCategory, sharedCategories = DRList:GetCategoryBySpellID(spellID)
+        if not drCategory then return end
 
         -- Check if unit that got the debuff is a player
         local isPlayer = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_PLAYER) ~= 0
-        if not isPlayer and not DRList:IsPvECategory(category) then return end
+        if not isPlayer and not DRList:IsPvECategory(drCategory) then return end
+
+        self.trackedPlayers = self.trackedPlayers or {}
+        self.trackedPlayers[destGUID] = self.trackedPlayers[destGUID] or {}
+        self.trackedPlayers[destGUID][drCategory] = self.trackedPlayers[destGUID][drCategory] or {}
+
+        local data = self.trackedPlayers[destGUID][drCategory]
+        local currentTime = GetTime()
+
+        if eventType == "SPELL_AURA_APPLIED" or eventType == "SPELL_AURA_REFRESH" then
+            -- Set how many times the DR category has been applied so far
+            if data.diminished == nil or currentTime >= (data.expirationTime or 0) then -- is nil or DR expired
+                local duration = 1
+                data.diminished = DRList:NextDR(duration, drCategory)
+            else
+                data.diminished = DRList:NextDR(data.diminished, drCategory)
+            end
+        end
 
         -- The debuff has faded or refreshed, DR timer starts
-        if eventType == "SPELL_AURA_REMOVED" or eventType == "SPELL_AURA_REFRESH" then
+        if eventType == "SPELL_AURA_REMOVED" then
+            data.startTime = currentTime
+            data.resetTime = DRList:GetResetTime(drCategory)
+            data.expirationTime = data.startTime + data.resetTime
+
             -- Trigger main DR category
-            self:StartOrUpdateDRTimer(category, destGUID, spellID)
+            self:StartOrUpdateDRTimer(drCategory, destGUID, spellID)
 
             -- Trigger any shared DR categories
             if sharedCategories then
                 for i = 1, #sharedCategories do
-                    if sharedCategories[i] ~= category then
+                    if sharedCategories[i] ~= drCategory then
                         self:StartOrUpdateDRTimer(sharedCategories[i], destGUID, spellID)
                     end
                 end
@@ -359,19 +380,6 @@ function Icons:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
         data.lastSpellID = spellID
     end
 
-    local time = GetTime()
-    data.startTime = time
-    data.resetTime = DRList:GetResetTime(drCategory)
-    data.expirationTime = data.startTime + data.resetTime
-
-    -- Set how many times the DR category has been applied so far
-    if data.diminished == nil or time >= (data.expirationTime or 0) then -- is nil or DR expired
-        local duration = 1
-        data.diminished = DRList:NextDR(duration, drCategory)
-    else
-        data.diminished = DRList:NextDR(data.diminished, drCategory)
-    end
-
     self:ShowDRIcons(drCategory, unitGUID)
 end
 
@@ -437,7 +445,6 @@ function Icons:ShowDRIcons(drCategory, unitGUID)
                     self:SetScript("OnUpdate", nil)
                     self:SetAlpha(0)
                     self.active = false
-                    data.diminished = nil
                 end
             end)
         end

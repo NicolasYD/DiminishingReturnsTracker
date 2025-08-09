@@ -6,6 +6,8 @@ local DRList = LibStub("DRList-1.0")
 function Icons:OnInitialize()
     self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
     self:RegisterEvent("PLAYER_TARGET_CHANGED")
+    self:RegisterEvent("START_TIMER")
+    self:RegisterEvent("GROUP_ROSTER_UPDATE")
 
     if not self.db then
         self:SetupDB()
@@ -26,13 +28,7 @@ end
 
 
 function Icons:OnDisable()
-    if self.frames then
-        for unit in pairs(self.frames) do
-            for category in pairs(self.frames[unit]) do
-                self.frames[unit][category]:SetAlpha(0)
-            end
-        end
-    end
+    self:HideAllIcons()
 end
 
 
@@ -115,10 +111,10 @@ function Icons:SetupDB()
     -- A helper function to shallow-copy and override table keys
     local function mergeTables(base, overrides)
         local result = {}
-        for k,v in pairs(base) do
+        for k, v in pairs(base) do
             result[k] = v
         end
-        for k,v in pairs(overrides) do
+        for k, v in pairs(overrides) do
             result[k] = v
         end
         return result
@@ -403,6 +399,71 @@ function Icons:PLAYER_TARGET_CHANGED()
 end
 
 
+function Icons:START_TIMER(timerType, _)
+    if timerType == 1 then
+        local inInstance, instanceType = IsInInstance()
+        if inInstance and instanceType == "arena" then
+            self:SetPartyAnchorTo()
+        end
+    end
+end
+
+
+function Icons:GROUP_ROSTER_UPDATE()
+    self:HideAllIcons()
+    self:ResetDRData()
+    self:SetPartyAnchorTo()
+end
+
+
+function Icons:HideAllIcons()
+    if self.frames then
+        for unit, _ in pairs(self.frames) do
+            for category, _ in pairs(self.frames[unit]) do
+                self.frames[unit][category]:SetAlpha(0)
+            end
+        end
+    end
+end
+
+
+function Icons:ResetDRData()
+    if self.trackedPlayers then
+        for unitGUID, _ in pairs(self.trackedPlayers) do
+            for drCategory, _ in pairs(self.trackedPlayers[unitGUID]) do
+                self.trackedPlayers[unitGUID][drCategory] = nil
+            end
+        end
+    end
+end
+
+
+function Icons:SetPartyAnchorTo()
+    local partyMember = {
+        "party1",
+        "party2",
+        "party3",
+        "party4",
+    }
+    local partyFrames = {
+        _G["CompactPartyFrameMember1"],
+        _G["CompactPartyFrameMember2"],
+        _G["CompactPartyFrameMember3"],
+        _G["CompactPartyFrameMember4"],
+        _G["CompactPartyFrameMember5"],
+    }
+
+    for _, member in ipairs(partyMember) do
+        for _, frame in ipairs(partyFrames) do
+            if UnitGUID(member) == UnitGUID(frame.unit) then
+                local frameName = frame:GetName()
+                self.db.profile.units[member].anchorTo = frameName
+            end
+        end
+    end
+end
+
+
 function Icons:GetUnitTokens(unitGUID)
     local unitTokens = {
         "player", "target", "focus",
@@ -417,7 +478,6 @@ function Icons:GetUnitTokens(unitGUID)
             table.insert(matches, unitToken)
         end
     end
-
     return matches
 end
 
@@ -446,60 +506,62 @@ function Icons:ShowDRIcons(drCategory, unitGUID)
     end
 
     for _, unitToken in ipairs(unitTokens) do
-        local frame = self.frames[unitToken][drCategory]
-        local data = self.trackedPlayers[unitGUID][drCategory]
-        local categoryIcon = self.db.profile.units[unitToken].categories[drCategory].icon
+        if self.db.profile.units[unitToken] then
+            local frame = self.frames[unitToken][drCategory]
+            local data = self.trackedPlayers[unitGUID][drCategory]
+            local categoryIcon = self.db.profile.units[unitToken].categories[drCategory].icon
 
-        if frame then
-            local iconTexture
-            if categoryIcon == "dynamic" then
-                local spellInfo = C_Spell.GetSpellInfo(data.lastSpellID)
-                iconTexture = spellInfo.originalIconID
-            else
-                local spellInfo = C_Spell.GetSpellInfo(categoryIcon)
-                iconTexture = spellInfo.originalIconID
-            end
-
-            frame:SetAlpha(1)
-            frame.active = true
-
-            frame.icon:SetTexture(iconTexture)
-
-            frame.cooldown:SetCooldown(data.startTime, data.resetTime)
-
-            local diminishedText = {
-                [0.5] = "1",
-                [0.25] = "2",
-                [0] = "3",
-            }
-            local diminishedColor = {
-                [0.5] = {0, 1, 0, 1},
-                [0.25] = {1, 1, 0, 1},
-                [0] = {1, 0, 0, 1},
-            }
-
-            local text = diminishedText[data.diminished] or ""
-            local color = diminishedColor[data.diminished] or {1,1,1,1}
-
-            frame.drIndicator.text:SetText(text)
-            frame.drIndicator.text:SetTextColor(unpack(color))
-
-            for _, tex in pairs(frame.borderTextures) do
-                tex:SetColorTexture(unpack(color))
-            end
-
-            for _, tex in pairs(frame.drIndicator.borderTextures) do
-                tex:SetColorTexture(unpack(color))
-            end
-
-            frame:SetScript("OnUpdate", function(self, elapsed)
-                local currentTime = GetTime()
-                if currentTime >= data.expirationTime then
-                    self:SetScript("OnUpdate", nil)
-                    self:SetAlpha(0)
-                    self.active = false
+            if frame then
+                local iconTexture
+                if categoryIcon == "dynamic" then
+                    local spellInfo = C_Spell.GetSpellInfo(data.lastSpellID)
+                    iconTexture = spellInfo.originalIconID
+                else
+                    local spellInfo = C_Spell.GetSpellInfo(categoryIcon)
+                    iconTexture = spellInfo.originalIconID
                 end
-            end)
+
+                frame:SetAlpha(1)
+                frame.active = true
+
+                frame.icon:SetTexture(iconTexture)
+
+                frame.cooldown:SetCooldown(data.startTime, data.resetTime)
+
+                local diminishedText = {
+                    [0.5] = "1",
+                    [0.25] = "2",
+                    [0] = "3",
+                }
+                local diminishedColor = {
+                    [0.5] = {0, 1, 0, 1},
+                    [0.25] = {1, 1, 0, 1},
+                    [0] = {1, 0, 0, 1},
+                }
+
+                local text = diminishedText[data.diminished] or ""
+                local color = diminishedColor[data.diminished] or {1,1,1,1}
+
+                frame.drIndicator.text:SetText(text)
+                frame.drIndicator.text:SetTextColor(unpack(color))
+
+                for _, tex in pairs(frame.borderTextures) do
+                    tex:SetColorTexture(unpack(color))
+                end
+
+                for _, tex in pairs(frame.drIndicator.borderTextures) do
+                    tex:SetColorTexture(unpack(color))
+                end
+
+                frame:SetScript("OnUpdate", function(self, elapsed)
+                    local currentTime = GetTime()
+                    if currentTime >= data.expirationTime then
+                        self:SetScript("OnUpdate", nil)
+                        self:SetAlpha(0)
+                        self.active = false
+                    end
+                end)
+            end
         end
     end
 
@@ -615,10 +677,10 @@ function Icons:UpdateFrame()
                 end
             end
 
-            if settings.enabled and frame.active then
-                frame:SetAlpha(1)
+            if settings.enabled then
+                frame:Show()
             else
-                frame:SetAlpha(0)
+                frame:Hide()
             end
         end
     end

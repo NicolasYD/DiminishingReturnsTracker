@@ -1,3 +1,7 @@
+v11.2.0.1-beta
+- Beta version.
+- Fixed couple of bugs.
+
 v11.1.7.2-alpha
 - Expanded functionality.
 

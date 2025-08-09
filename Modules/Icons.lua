@@ -314,7 +314,7 @@ function Icons:PLAYER_TARGET_CHANGED()
     if Icons.testing then return end
 
     local targetGUID = UnitGUID("target")
-    local tracked = self.trackedPlayers and self.trackedPlayers[targetGUID]
+    local trackedUnit = self.trackedPlayers[targetGUID]
     local unitToken = "target"
     local targetFrames = self.frames[unitToken]
 
@@ -325,15 +325,15 @@ function Icons:PLAYER_TARGET_CHANGED()
         end
     end
 
-    if not tracked then return end
+    if not trackedUnit then return end
 
-    for drCategory, data in pairs(tracked) do
+    for drCategory, data in pairs(trackedUnit) do
         local frame = self.frames[unitToken][drCategory]
 
-        if not frame then return end
-
-        if data.expirationTime and GetTime() < data.expirationTime then
-            self:ShowDRTimer(drCategory, targetGUID)
+        if frame then
+            if data.expirationTime and GetTime() < data.expirationTime then
+                self:ShowDRTimer(drCategory, targetGUID)
+            end
         end
     end
 end

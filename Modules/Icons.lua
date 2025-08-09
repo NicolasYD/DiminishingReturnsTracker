@@ -653,15 +653,32 @@ function Icons:Test()
 
     local function TestIcons()
         local units = self.db.profile.units
-        local categories = DRList:GetCategories()
-        categories["taunt"] = nil
+        local drCategories = DRList:GetCategories()
+        drCategories["taunt"] = nil
         local spellList = DRList:GetSpells()
         local reset = DRList:GetResetTime("stun")
 
-        for category in pairs(categories) do
-            local spellID = GetRandomSpell(spellList, category)
-            for unit in pairs(units) do
-                self:StartOrUpdateDRTimer(category, unit, spellID)
+        for drCategory in pairs(drCategories) do
+            local spellID = GetRandomSpell(spellList, drCategory)
+            for unitToken in pairs(units) do
+                Icons.trackedPlayers = Icons.trackedPlayers or {}
+                Icons.trackedPlayers[unitToken] = Icons.trackedPlayers[unitToken] or {}
+                Icons.trackedPlayers[unitToken][drCategory] = Icons.trackedPlayers[unitToken][drCategory] or {}
+
+                local currentTime = GetTime()
+                local data = Icons.trackedPlayers[unitToken][drCategory]
+                data.startTime = currentTime
+                data.resetTime = DRList:GetResetTime(drCategory)
+                data.expirationTime = data.startTime + data.resetTime
+
+                if data.diminished == nil or currentTime >= (data.expirationTime or 0) then -- is nil or DR expired
+                    local duration = 1
+                    data.diminished = DRList:NextDR(duration, drCategory)
+                else
+                    data.diminished = DRList:NextDR(data.diminished, drCategory)
+                end
+
+                self:StartOrUpdateDRTimer(drCategory, unitToken, spellID)
             end
         end
 
@@ -681,10 +698,11 @@ function Icons:Test()
         TestIcons()
     else
         Icons.testing = false
+        Icons.trackedPlayers = {}
         if self.frames then
             for unit in pairs(self.frames) do
-                for category in pairs(self.frames[unit]) do
-                    local frame = self.frames[unit][category]
+                for drCategory in pairs(self.frames[unit]) do
+                    local frame = self.frames[unit][drCategory]
                     frame.active = false
                     frame:SetAlpha(0)
                 end
@@ -699,6 +717,9 @@ end
 
 
 function Icons:ResetModule()
+    if Icons.testing then
+        self:Test()
+    end
     self.db:ResetProfile()
     self:UpdateFrame()
 end

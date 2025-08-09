@@ -10,17 +10,15 @@ function Icons:OnInitialize()
     if not self.db then
         self:SetupDB()
     end
-
-    self.trackedPlayers = {}
 end
 
 
 function Icons:OnEnable()
     local drCategories = DRList:GetCategories()
     drCategories["taunt"] = nil
-    for unit in pairs(self.db.profile.units) do
+    for unitToken in pairs(self.db.profile.units) do
         for drCategory in pairs(drCategories) do
-            self:CreateFrame(unit, drCategory)
+            self:CreateFrame(unitToken, drCategory)
         end
     end
     self:UpdateFrame()
@@ -186,14 +184,43 @@ end
 
 
 function Icons:CreateFrame(unit, category)
+    local function CreateColoredBorder(parent, color, size)
+        size = size or 1
+        color = color or {1, 1, 1, 1}
+
+        local borders = {}
+
+        borders.top = parent:CreateTexture(nil, "OVERLAY")
+        borders.top:SetColorTexture(unpack(color))
+        borders.top:SetPoint("TOPLEFT", -size, size)
+        borders.top:SetPoint("TOPRIGHT", size, size)
+        borders.top:SetHeight(size)
+
+        borders.bottom = parent:CreateTexture(nil, "OVERLAY")
+        borders.bottom:SetColorTexture(unpack(color))
+        borders.bottom:SetPoint("BOTTOMLEFT", -size, -size)
+        borders.bottom:SetPoint("BOTTOMRIGHT", size, -size)
+        borders.bottom:SetHeight(size)
+
+        borders.left = parent:CreateTexture(nil, "OVERLAY")
+        borders.left:SetColorTexture(unpack(color))
+        borders.left:SetPoint("TOPLEFT", -size, size)
+        borders.left:SetPoint("BOTTOMLEFT", -size, -size)
+        borders.left:SetWidth(size)
+
+        borders.right = parent:CreateTexture(nil, "OVERLAY")
+        borders.right:SetColorTexture(unpack(color))
+        borders.right:SetPoint("TOPRIGHT", size, size)
+        borders.right:SetPoint("BOTTOMRIGHT", size, -size)
+        borders.right:SetWidth(size)
+
+        return borders
+    end
+
     self.frames = self.frames or {}
     self.frames[unit] = self.frames[unit] or {}
 
-    if self.frames[unit][category] then
-        return
-    end
-
-    local frame = CreateFrame("Frame", unit..category, UIParent)
+    local frame = CreateFrame("Frame", "DRTFrame." .. unit .. "." .. category, UIParent)
     self.frames[unit][category] = frame
 
     -- Icon texture
@@ -234,40 +261,6 @@ function Icons:CreateFrame(unit, category)
 end
 
 
-function CreateColoredBorder(parent, color, size)
-    size = size or 1
-    color = color or {1, 1, 1, 1}
-
-    local borders = {}
-
-    borders.top = parent:CreateTexture(nil, "OVERLAY")
-    borders.top:SetColorTexture(unpack(color))
-    borders.top:SetPoint("TOPLEFT", -size, size)
-    borders.top:SetPoint("TOPRIGHT", size, size)
-    borders.top:SetHeight(size)
-
-    borders.bottom = parent:CreateTexture(nil, "OVERLAY")
-    borders.bottom:SetColorTexture(unpack(color))
-    borders.bottom:SetPoint("BOTTOMLEFT", -size, -size)
-    borders.bottom:SetPoint("BOTTOMRIGHT", size, -size)
-    borders.bottom:SetHeight(size)
-
-    borders.left = parent:CreateTexture(nil, "OVERLAY")
-    borders.left:SetColorTexture(unpack(color))
-    borders.left:SetPoint("TOPLEFT", -size, size)
-    borders.left:SetPoint("BOTTOMLEFT", -size, -size)
-    borders.left:SetWidth(size)
-
-    borders.right = parent:CreateTexture(nil, "OVERLAY")
-    borders.right:SetColorTexture(unpack(color))
-    borders.right:SetPoint("TOPRIGHT", size, size)
-    borders.right:SetPoint("BOTTOMRIGHT", size, -size)
-    borders.right:SetWidth(size)
-
-    return borders
-end
-
-
 function Icons:COMBAT_LOG_EVENT_UNFILTERED()
     if Icons.testing then return end
 
@@ -280,16 +273,11 @@ function Icons:COMBAT_LOG_EVENT_UNFILTERED()
         if not category then return end
 
         -- Check if unit that got the debuff is a player
-        -- You might also want to check if it's a hostile or friendly unit depending on your needs
         local isPlayer = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_PLAYER) ~= 0
-        --if not isPlayer then return end
-        -- for PvE too: 
         if not isPlayer and not DRList:IsPvECategory(category) then return end
 
         -- The debuff has faded or refreshed, DR timer starts
         if eventType == "SPELL_AURA_REMOVED" or eventType == "SPELL_AURA_REFRESH" then
-            --local unitID = UnitTokenFromGUID(destGUID)
-
             -- Trigger main DR category
             self:StartOrUpdateDRTimer(category, destGUID, spellID)
 
@@ -305,7 +293,9 @@ function Icons:COMBAT_LOG_EVENT_UNFILTERED()
     end
 
     if eventType == "UNIT_DIED" then
-        self.trackedPlayers[destGUID] = nil
+        if self.trackedPlayers and self.trackedPlayers[destGUID] then
+            self.trackedPlayers[destGUID] = nil
+        end
     end
 end
 
@@ -314,7 +304,7 @@ function Icons:PLAYER_TARGET_CHANGED()
     if Icons.testing then return end
 
     local targetGUID = UnitGUID("target")
-    local trackedUnit = self.trackedPlayers[targetGUID]
+    local trackedUnit = self.trackedPlayers and self.trackedPlayers[targetGUID]
     local unitToken = "target"
     local targetFrames = self.frames[unitToken]
 
@@ -332,7 +322,7 @@ function Icons:PLAYER_TARGET_CHANGED()
 
         if frame then
             if data.expirationTime and GetTime() < data.expirationTime then
-                self:ShowDRTimer(drCategory, targetGUID)
+                self:ShowDRIcons(drCategory, targetGUID)
             end
         end
     end
@@ -359,21 +349,19 @@ end
 
 
 function Icons:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
-    -- Table for storing all DRs
-    local trackedPlayers = self.trackedPlayers
+    self.trackedPlayers = self.trackedPlayers or {}
+    self.trackedPlayers[unitGUID] = self.trackedPlayers[unitGUID] or {}
+    self.trackedPlayers[unitGUID][drCategory] = self.trackedPlayers[unitGUID][drCategory] or {}
 
-    -- Create or update DR tables for unit
-    trackedPlayers[unitGUID] = trackedPlayers[unitGUID] or {}
-    trackedPlayers[unitGUID][drCategory] = trackedPlayers[unitGUID][drCategory] or {}
+    local data = self.trackedPlayers[unitGUID][drCategory]
 
-    local data = trackedPlayers[unitGUID][drCategory]
-    data.lastSpellID = spellID
+    if spellID then
+        data.lastSpellID = spellID
+    end
 
     local time = GetTime()
     data.startTime = time
     data.resetTime = DRList:GetResetTime(drCategory)
-
-    -- Set DR category expiration time
     data.expirationTime = data.startTime + data.resetTime
 
     -- Set how many times the DR category has been applied so far
@@ -384,14 +372,11 @@ function Icons:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
         data.diminished = DRList:NextDR(data.diminished, drCategory)
     end
 
-    self:ShowDRTimer(drCategory, unitGUID)
+    self:ShowDRIcons(drCategory, unitGUID)
 end
 
 
-function Icons:ShowDRTimer(drCategory, unitGUID)
-    -- Do your stuff here, start a frame timer, etc.
-    local trackedPlayers = self.trackedPlayers
-    local data = trackedPlayers[unitGUID][drCategory]
+function Icons:ShowDRIcons(drCategory, unitGUID)
     local unitTokens
     if Icons.testing then
         unitTokens = {unitGUID}
@@ -400,90 +385,66 @@ function Icons:ShowDRTimer(drCategory, unitGUID)
     end
 
     for _, unitToken in ipairs(unitTokens) do
-        if not self.frames[unitToken] then return end
         local frame = self.frames[unitToken][drCategory]
+        local data = self.trackedPlayers[unitGUID][drCategory]
         local categoryIcon = self.db.profile.units[unitToken].categories[drCategory].icon
 
-        local iconTexture
-        if categoryIcon == "dynamic" then
-            local spellInfo = C_Spell.GetSpellInfo(data.lastSpellID)
-            iconTexture = spellInfo.originalIconID
-        else
-            local spellInfo = C_Spell.GetSpellInfo(categoryIcon)
-            iconTexture = spellInfo.originalIconID
-        end
-
-
-        frame:SetAlpha(1)
-        frame.active = true
-
-        frame.icon:SetTexture(iconTexture)
-
-        frame.cooldown:SetCooldown(data.startTime, data.resetTime)
-
-        local diminished = data.diminished
-        local diminishedText = {
-            [0.5] = "1",
-            [0.25] = "2",
-            [0] = "3",
-        }
-        local diminishedColor = {
-            [0.5] = {0, 1, 0, 1},
-            [0.25] = {1, 1, 0, 1},
-            [0] = {1, 0, 0, 1},
-        }
-
-        local text = diminishedText[diminished] or ""
-        local color = diminishedColor[diminished] or {1,1,1,1}
-
-        frame.drIndicator.text:SetText(text)
-        frame.drIndicator.text:SetTextColor(unpack(color))
-
-        for _, tex in pairs(frame.borderTextures) do
-            tex:SetColorTexture(unpack(color))
-        end
-
-        for _, tex in pairs(frame.drIndicator.borderTextures) do
-            tex:SetColorTexture(unpack(color))
-        end
-
-        self:UpdateFrame()
-        self:ResetDRTimer()
-    end
-end
-
-
-function Icons:ResetDRTimer()
-    -- Create or reuse a global timer frame
-    if not Icons.DRTimerFrame then
-        Icons.DRTimerFrame = CreateFrame("Frame")
-        Icons.DRTimerFrame:SetScript("OnUpdate", function(self, elapsed)
-            local currentTime = GetTime()
-            for unitGUID, categories in pairs(Icons.trackedPlayers) do
-                local unitTokens = Icons:GetUnitTokens(unitGUID)
-                for drCategory, data in pairs(categories) do
-                    if data.expirationTime and currentTime >= data.expirationTime then
-                        for _, unitToken in ipairs(unitTokens) do
-                            local frame = Icons.frames[unitToken] and Icons.frames[unitToken][drCategory]
-                            if frame then
-                                frame:SetScript("OnUpdate", nil)
-                                frame.active = false
-                                frame:SetAlpha(0)
-                                if frame.cooldown then
-                                    frame.cooldown:Clear()
-                                end
-                            end
-                        end
-
-                        Icons.trackedPlayers[unitGUID][drCategory].diminished = nil
-                        Icons:UpdateFrame()
-                    end
-                end
+        if frame then
+            local iconTexture
+            if categoryIcon == "dynamic" then
+                local spellInfo = C_Spell.GetSpellInfo(data.lastSpellID)
+                iconTexture = spellInfo.originalIconID
+            else
+                local spellInfo = C_Spell.GetSpellInfo(categoryIcon)
+                iconTexture = spellInfo.originalIconID
             end
-        end)
-    end
-end
 
+            frame:SetAlpha(1)
+            frame.active = true
+
+            frame.icon:SetTexture(iconTexture)
+
+            frame.cooldown:SetCooldown(data.startTime, data.resetTime)
+
+            local diminishedText = {
+                [0.5] = "1",
+                [0.25] = "2",
+                [0] = "3",
+            }
+            local diminishedColor = {
+                [0.5] = {0, 1, 0, 1},
+                [0.25] = {1, 1, 0, 1},
+                [0] = {1, 0, 0, 1},
+            }
+
+            local text = diminishedText[data.diminished] or ""
+            local color = diminishedColor[data.diminished] or {1,1,1,1}
+
+            frame.drIndicator.text:SetText(text)
+            frame.drIndicator.text:SetTextColor(unpack(color))
+
+            for _, tex in pairs(frame.borderTextures) do
+                tex:SetColorTexture(unpack(color))
+            end
+
+            for _, tex in pairs(frame.drIndicator.borderTextures) do
+                tex:SetColorTexture(unpack(color))
+            end
+
+            frame:SetScript("OnUpdate", function(self, elapsed)
+                local currentTime = GetTime()
+                if currentTime >= data.expirationTime then
+                    self:SetScript("OnUpdate", nil)
+                    self:SetAlpha(0)
+                    self.active = false
+                    data.diminished = nil
+                end
+            end)
+        end
+    end
+
+    self:UpdateFrame()
+end
 
 
 function Icons:UpdateFrame()
@@ -592,12 +553,6 @@ function Icons:UpdateFrame()
                 else
                     tex:SetAlpha(0)
                 end
-            end
-
-            if settings.enabled and frame.enabled then
-                frame:SetAlpha(1)
-            else
-                frame:SetAlpha(0)
             end
         end
     end

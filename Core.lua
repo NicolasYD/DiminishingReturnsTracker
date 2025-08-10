@@ -64,8 +64,8 @@ end
 function DRT:FrameSelector(onSelectCallback)
 	local frameChooserFrame = DRT.frameChooserFrame
 	local frameChooserBox = DRT.frameChooserBox
+	local cursorCrosshairs = DRT.cursorCrosshairs
 	local focusName
-
 
 	local function StopFrameChooser()
 		if frameChooserFrame then
@@ -75,14 +75,18 @@ function DRT:FrameSelector(onSelectCallback)
 		if frameChooserBox then
 			frameChooserBox:Hide()
 		end
+		if cursorCrosshairs then
+			cursorCrosshairs:Hide()
+		end
 	end
 
-
+	-- Create the main frame chooser frame
 	if not frameChooserFrame then
 		frameChooserFrame = CreateFrame("Frame", "DRT_FrameChooserFrame", UIParent)
 		DRT.frameChooserFrame = frameChooserFrame
 	end
 
+	-- Create the green selection box
 	if not frameChooserBox then
 		frameChooserBox = CreateFrame("Frame", "DRT_FrameChooserBox", frameChooserFrame, "BackdropTemplate")
 		frameChooserBox:SetFrameStrata("TOOLTIP")
@@ -96,9 +100,25 @@ function DRT:FrameSelector(onSelectCallback)
 		DRT.frameChooserBox = frameChooserBox
 	end
 
+	-- Create the cursor crosshairs
+	if not cursorCrosshairs then
+		cursorCrosshairs = CreateFrame("Frame", "DRT_cursorCrosshairs", UIParent)
+		cursorCrosshairs:SetSize(32, 32)
+		cursorCrosshairs:SetFrameStrata("TOOLTIP")
+		local tex = cursorCrosshairs:CreateTexture(nil, "OVERLAY")
+		tex:SetAllPoints()
+		tex:SetTexture("Interface\\CURSOR\\Crosshairs")
+		DRT.cursorCrosshairs = cursorCrosshairs
+	end
+
 	frameChooserFrame:Show()
+	cursorCrosshairs:Show()
 
 	frameChooserFrame:SetScript("OnUpdate", function()
+		local x, y = GetCursorPosition()
+		local scale = UIParent:GetEffectiveScale()
+		cursorCrosshairs:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x / scale, y / scale)
+
 		if IsMouseButtonDown("RightButton") then
 			StopFrameChooser()
 		elseif IsMouseButtonDown("LeftButton") and focusName then

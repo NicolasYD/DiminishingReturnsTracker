@@ -1,4 +1,5 @@
 local DRT = LibStub("AceAddon-3.0"):GetAddon("DRT")
+local ACR = LibStub("AceConfigRegistry-3.0")
 local Icons = DRT:NewModule("Icons", "AceEvent-3.0")
 
 local DRList = LibStub("DRList-1.0")
@@ -1047,6 +1048,19 @@ function Icons:BuildGeneralOptions(unit)
                         self:UpdateFrame()
                     end,
                     order = 15,
+                },
+                selectFrame = {
+                    type = "execute",
+                    name = "Select Frame",
+                    desc = "Click on the frame that you want to select.",
+                    func = function()
+                        DRT:FrameSelector(function(selectedFrame)
+                            self.db.profile.units[unit].anchorTo = selectedFrame
+                            ACR:NotifyChange("DRT")
+                            self:UpdateFrame()
+                        end)
+                    end,
+                    order = 16,
                 },
                 separator2 = {
                     type = "description",

@@ -12,7 +12,11 @@ function DRT:GetOptions()
 				order = 1,
 				func = function()
 					self:TestModules()
-				end
+				end,
+				disabled = function ()
+					local inInstance, instanceType = IsInInstance()
+					return inInstance and instanceType == "arena"
+				end,
 			},
 			--[[ general = {
 				type = "group",

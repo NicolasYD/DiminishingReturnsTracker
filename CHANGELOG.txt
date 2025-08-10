@@ -1,3 +1,8 @@
+v11.2.0.3-beta
+- Added a button to copy settings from another unit.
+- Added a button to reset settings of a specific unit to defaults.
+- Automatically deactivate test mode when entering arena and prevent test mode from being activated in arena.
+
 v11.2.0.2-beta
 - Added a frame selector button to the options to set anchor frames.
 

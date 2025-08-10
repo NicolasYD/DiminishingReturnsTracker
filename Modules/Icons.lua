@@ -7,7 +7,8 @@ local DRList = LibStub("DRList-1.0")
 function Icons:OnInitialize()
     self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
     self:RegisterEvent("PLAYER_TARGET_CHANGED")
-    self:RegisterEvent("START_TIMER")
+    self:RegisterEvent("PLAYER_ENTERING_WORLD")
+    self:RegisterEvent("UNIT_NAME_UPDATE")
     self:RegisterEvent("GROUP_ROSTER_UPDATE")
 
     if not self.db then
@@ -400,11 +401,21 @@ function Icons:PLAYER_TARGET_CHANGED()
 end
 
 
-function Icons:START_TIMER(timerType, _)
-    if timerType == 1 then
-        local inInstance, instanceType = IsInInstance()
-        if inInstance and instanceType == "arena" then
-            self:SetPartyAnchorTo()
+function Icons:PLAYER_ENTERING_WORLD()
+    local inInstance, instanceType = IsInInstance()
+    if inInstance and instanceType == "arena" then
+        if Icons.testing then
+            self:Test()
+        end
+    end
+end
+
+
+function Icons:UNIT_NAME_UPDATE(unit)
+    if unit:match("^arena%d$") then
+        local name = UnitName(unit)
+        if name and name ~= "" then
+            
         end
     end
 end

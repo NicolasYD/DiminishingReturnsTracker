@@ -788,6 +788,32 @@ function Icons:ResetModule()
 end
 
 
+function Icons:CopySettings(fromUnit, toUnit, excludeList)
+    local fromSettings = self.db.profile.units[fromUnit]
+    local toSettings = self.db.profile.units[toUnit]
+    if not fromSettings or not toSettings then return end
+
+    -- Convert exclude list to a lookup table
+    local excludeMap = {}
+    if excludeList then
+        for _, key in ipairs(excludeList) do
+            excludeMap[key] = true
+        end
+    end
+
+    -- Deep copy with exclusions (shallow level only here)
+    for k, v in pairs(fromSettings) do
+        if not excludeMap[k] then
+            if type(v) == "table" then
+                toSettings[k] = CopyTable(v)  -- WoW's built-in deep copy
+            else
+                toSettings[k] = v
+            end
+        end
+    end
+end
+
+
 function Icons:BuildGeneralOptions(unit)
     local anchorPointValues = {
         TOP = "TOP",
@@ -1336,6 +1362,7 @@ function Icons:GetOptions()
     for _ in pairs(drCategories) do
         count = count + 1
     end
+    local copySettingsFrom = {}
 
     for unit in pairs(self.db.profile.units) do
         local name = string.upper(string.sub(unit, 1, 1)) .. string.sub(unit, 2)
@@ -1361,6 +1388,94 @@ function Icons:GetOptions()
                         return not self:IsEnabled()
                     end,
                     order = 100,
+                },
+                separator1 = {
+                    type = "description",
+                    name = "",
+                    width = "full",
+                    order = 110
+                },
+                copySettingsFrom = {
+                    type = "select",
+                    name = "Copy Settings From",
+                    desc = "Copy settings from another unit.",
+                    values = function(info)
+                        local settings = self.db.profile.units
+                        local currentUnit = info[#info - 1]
+                        local values = {
+                            ["_none"] = "None",
+                        }
+
+                        for unitToken in pairs(settings) do
+                            if unitToken ~= currentUnit then
+                                values[unitToken] = unitToken
+                            end
+                        end
+
+                        return values
+                    end,
+                    sorting = function(info)
+                        local settings = self.db.profile.units
+                        local currentUnit = info[#info - 1]
+                        local sorted = {"_none"}
+
+                        for unitToken in pairs(settings) do
+                            if unitToken ~= currentUnit then
+                                table.insert(sorted, unitToken)
+                            end
+                        end
+
+                        table.sort(sorted, function(a, b)
+                            if a == "_none" then return true end
+                            if b == "_none" then return false end
+                            return (settings[a].order or 0) < (settings[b].order or 0)
+                        end)
+
+                        return sorted
+                    end,
+                    get = function(info)
+                        return copySettingsFrom[unit] or "_none"
+                    end,
+                    set = function(info, value)
+                        if value == "_none" then
+                            copySettingsFrom[unit] = nil
+                        else
+                            copySettingsFrom[unit] = value
+                        end
+                    end,
+                    disabled = function(info)
+                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled
+                    end,
+                    order = 120,
+                },
+                copySettings = {
+                    type = "execute",
+                    name = "Copy",
+                    desc = "Copy settings from selected unit to this one.",
+                    func = function(info)
+                        local fromUnit = copySettingsFrom[unit]
+                        local toUnit = info[#info - 1]
+                        local exclude = {
+                            "enabled",
+                            "anchorTo",
+                            "anchorPoint",
+                            "iconPoint",
+                            "offsetX",
+                            "offsetY",
+                            "growIcons",
+                            "iconsSpacing",
+                            "order",
+                        }
+                        if fromUnit and toUnit and fromUnit ~= toUnit then
+                            self:CopySettings(fromUnit, toUnit, exclude)
+                        end
+                        copySettingsFrom[unit] = nil
+                        self:UpdateFrame()
+                    end,
+                    disabled = function ()
+                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled or not copySettingsFrom[unit]
+                    end,
+                    order = 130,
                 },
                 general = {
                     type = "group",

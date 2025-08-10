@@ -788,6 +788,30 @@ function Icons:ResetModule()
 end
 
 
+function Icons:ResetUnitSettings(unit)
+    -- Deep copy utility function
+    local function DeepCopy(from)
+        if type(from) ~= "table" then return from end
+        local to = {}
+        for k, v in pairs(from) do
+            to[k] = DeepCopy(v)
+        end
+        return to
+    end
+
+
+    local defaults = self.db.defaults.profile.units[unit]
+    if not defaults then
+        print("No defaults found for unit:", unit)
+        return
+    end
+
+    -- Deep copy default settings to profile.units[unit]
+    self.db.profile.units[unit] = DeepCopy(defaults)
+    self:UpdateFrame()
+end
+
+
 function Icons:CopySettings(fromUnit, toUnit, excludeList)
     local fromSettings = self.db.profile.units[fromUnit]
     local toSettings = self.db.profile.units[toUnit]
@@ -1339,6 +1363,7 @@ function Icons:GetOptions()
             resetButton = {
                 type = "execute",
 				name = "Reset Module",
+                desc = "Restore default settings for the entire module.",
 				func = function ()
                     self:ResetModule()
                 end,
@@ -1375,7 +1400,7 @@ function Icons:GetOptions()
             args = {
                 enabled = {
                     type = "toggle",
-                    name = "Enable",
+                    name = "Enable Unit",
                     desc = "Enable DR tracking for this unit",
                     get = function ()
                         return self.db.profile.units[unit].enabled
@@ -1388,6 +1413,18 @@ function Icons:GetOptions()
                         return not self:IsEnabled()
                     end,
                     order = 100,
+                },
+                resetUnit = {
+                    type = "execute",
+                    name = "Reset Unit",
+                    desc = "Restore default settings for this unit.",
+                    func = function ()
+                        self:ResetUnitSettings(unit)
+                    end,
+                    disabled = function ()
+                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled
+                    end,
+                    order = 109
                 },
                 separator1 = {
                     type = "description",

@@ -8,7 +8,6 @@ function Icons:OnInitialize()
     self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
     self:RegisterEvent("PLAYER_TARGET_CHANGED")
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
-    self:RegisterEvent("UNIT_NAME_UPDATE")
     self:RegisterEvent("GROUP_ROSTER_UPDATE")
 
     if not self.db then
@@ -411,16 +410,6 @@ function Icons:PLAYER_ENTERING_WORLD()
 end
 
 
-function Icons:UNIT_NAME_UPDATE(unit)
-    if unit:match("^arena%d$") then
-        local name = UnitName(unit)
-        if name and name ~= "" then
-            
-        end
-    end
-end
-
-
 function Icons:GROUP_ROSTER_UPDATE()
     self:HideAllIcons()
     self:ResetDRData()
@@ -466,10 +455,13 @@ function Icons:SetPartyAnchorTo()
     }
 
     for _, member in ipairs(partyMember) do
-        for _, frame in ipairs(partyFrames) do
-            if UnitGUID(member) == UnitGUID(frame.unit) then
-                local frameName = frame:GetName()
-                self.db.profile.units[member].anchorTo = frameName
+        local settings = self.db.profile.units[member].anchorTo
+        if settings:match("CompactPartyFrameMember") then
+            for _, frame in ipairs(partyFrames) do
+                if UnitGUID(member) == UnitGUID(frame.unit) then
+                    local frameName = frame:GetName()
+                    self.db.profile.units[member].anchorTo = frameName
+                end
             end
         end
     end

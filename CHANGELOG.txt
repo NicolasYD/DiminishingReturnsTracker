@@ -1,3 +1,6 @@
+v11.2.0.2-beta
+- Added a frame selector button to the options to set anchor frames.
+
 v11.2.0.1-beta
 - Beta version.
 - Fixed couple of bugs.

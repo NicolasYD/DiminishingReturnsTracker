@@ -106,6 +106,7 @@ function Icons:SetupDB()
         drIndicator = true,
         borderSize = 1,
         customIndicator = false,
+        lockPosition = true,
     }
 
 
@@ -841,6 +842,34 @@ function Icons:CopySettings(fromUnit, toUnit, excludeList)
 end
 
 
+function Icons:MoveFrame(frame, unit, onStopCallback)
+    local isLocked = self.db.profile.units[unit].lockPosition
+
+    if isLocked then
+        -- Disable dragging
+        frame:EnableMouse(false)
+        frame:SetMovable(false)
+        frame:RegisterForDrag()
+        frame:SetScript("OnDragStart", nil)
+        frame:SetScript("OnDragStop", nil)
+    else
+        -- Enable dragging
+        frame:EnableMouse(true)
+        frame:SetMovable(true)
+        frame:RegisterForDrag("LeftButton")
+        frame:SetClampedToScreen(true)
+
+        frame:SetScript("OnDragStart", frame.StartMoving)
+        frame:SetScript("OnDragStop", function(self)
+            self:StopMovingOrSizing()
+            if type(onStopCallback) == "function" then
+                onStopCallback(self)
+            end
+        end)
+    end
+end
+
+
 function Icons:BuildGeneralOptions(unit)
     local anchorPointValues = {
         TOP = "TOP",
@@ -1004,50 +1033,6 @@ function Icons:BuildGeneralOptions(unit)
                     width = "full",
                     order = 100,
                 },
-                borderSize = {
-                    type = "range",
-                    name = "Colored Border Size",
-                    desc = "",
-                    min = 1,
-                    max = 20,
-                    step = 1,
-                    get = function ()
-                        return self.db.profile.units[unit].borderSize
-                    end,
-                    set = function (_, value)
-                        self.db.profile.units[unit].borderSize = value
-                        self:UpdateFrame()
-                    end,
-                    order = 109,
-                },
-                frameSize = {
-                    type = "range",
-                    name = "Icons Frame Size",
-                    desc = "",
-                    min = 0,
-                    max = 200,
-                    step = 1,
-                    get = function ()
-                        return self.db.profile.units[unit].frameSize
-                    end,
-                    set = function (_, value)
-                        self.db.profile.units[unit].frameSize = value
-                        self:UpdateFrame()
-                    end,
-                    order = 110,
-                },
-            },
-        },
-        position = {
-            type = "group",
-            name = "Position",
-            desc = "Position settings",
-            inline = true,
-            disabled = function ()
-                return not self:IsEnabled() or not self.db.profile.units[unit].enabled
-            end,
-            order = 3,
-            args = {
                 growIcons = {
                     type = "select",
                     name = "Grow Direction",
@@ -1065,7 +1050,7 @@ function Icons:BuildGeneralOptions(unit)
                         self.db.profile.units[unit].growIcons = value
                         self:UpdateFrame()
                     end,
-                    order = 5,
+                    order = 110,
                 },
                 iconsSpacing = {
                     type = "range",
@@ -1081,13 +1066,86 @@ function Icons:BuildGeneralOptions(unit)
                         self.db.profile.units[unit].iconsSpacing = value
                         self:UpdateFrame()
                     end,
-                    order = 6,
+                    order = 120,
+                },
+                separator4 = {
+                    type = "description",
+                    name = "",
+                    width = "full",
+                    order = 130,
+                },
+                borderSize = {
+                    type = "range",
+                    name = "Colored Border Size",
+                    desc = "",
+                    min = 1,
+                    max = 20,
+                    step = 1,
+                    get = function ()
+                        return self.db.profile.units[unit].borderSize
+                    end,
+                    set = function (_, value)
+                        self.db.profile.units[unit].borderSize = value
+                        self:UpdateFrame()
+                    end,
+                    order = 140,
+                },
+                frameSize = {
+                    type = "range",
+                    name = "Icons Frame Size",
+                    desc = "",
+                    min = 0,
+                    max = 200,
+                    step = 1,
+                    get = function ()
+                        return self.db.profile.units[unit].frameSize
+                    end,
+                    set = function (_, value)
+                        self.db.profile.units[unit].frameSize = value
+                        self:UpdateFrame()
+                    end,
+                    order = 150,
+                },
+            },
+        },
+        position = {
+            type = "group",
+            name = "Position",
+            desc = "Position settings",
+            inline = true,
+            disabled = function ()
+                return not self:IsEnabled() or not self.db.profile.units[unit].enabled
+            end,
+            order = 3,
+            args = {
+                lockPosition = {
+                    type = "toggle",
+                    name = "Lock Position",
+                    desc = "If unlocked, icons can be moved by mouse.",
+                    get = function()
+                        return self.db.profile.units[unit].lockPosition
+                    end,
+                    set = function(_, value)
+                        local frame = Icons.frames[unit]["stun"]
+                        self.db.profile.units[unit].lockPosition = value
+                        Icons:MoveFrame(frame, unit, function(self)
+                            local anchorPoint, _, iconPoint, offsetX, offsetY = self:GetPoint()
+                            local settings = Icons.db.profile.units[unit]
+                            settings.anchorPoint = anchorPoint
+                            settings.anchorTo = "UIParent"
+                            settings.iconPoint = iconPoint
+                            settings.offsetX = offsetX
+                            settings.offsetY = offsetY
+                            ACR:NotifyChange("DRT")
+                        end)
+                    end,
+                    order = 10,
                 },
                 separator1 = {
                     type = "description",
                     name = "",
                     width = "full",
-                    order = 10,
+                    order = 20,
                 },
                 anchorTo = {
                     type = "input",
@@ -1100,7 +1158,10 @@ function Icons:BuildGeneralOptions(unit)
                         self.db.profile.units[unit].anchorTo = value
                         self:UpdateFrame()
                     end,
-                    order = 15,
+                    disabled = function ()
+                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled or not self.db.profile.units[unit].lockPosition
+                    end,
+                    order = 30,
                 },
                 selectFrame = {
                     type = "execute",
@@ -1113,13 +1174,16 @@ function Icons:BuildGeneralOptions(unit)
                             self:UpdateFrame()
                         end)
                     end,
-                    order = 16,
+                    disabled = function ()
+                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled or not self.db.profile.units[unit].lockPosition
+                    end,
+                    order = 40,
                 },
                 separator2 = {
                     type = "description",
                     name = "",
                     width = "full",
-                    order = 20,
+                    order = 50,
                 },
                 anchorPoint = {
                     type = "select",
@@ -1133,7 +1197,10 @@ function Icons:BuildGeneralOptions(unit)
                         self.db.profile.units[unit].anchorPoint = value
                         self:UpdateFrame()
                     end,
-                    order = 25,
+                    disabled = function ()
+                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled or not self.db.profile.units[unit].lockPosition
+                    end,
+                    order = 60,
                 },
                 iconPoint = {
                     type = "select",
@@ -1147,20 +1214,23 @@ function Icons:BuildGeneralOptions(unit)
                         self.db.profile.units[unit].iconPoint = value
                         self:UpdateFrame()
                     end,
-                    order = 30,
+                    disabled = function ()
+                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled or not self.db.profile.units[unit].lockPosition
+                    end,
+                    order = 70,
                 },
                 separator3 = {
                     type = "description",
                     name = "",
                     width = "full",
-                    order = 35,
+                    order = 80,
                 },
                 offsetX = {
                     type = "range",
                     name = "Icon Frame Offset X",
                     desc = "",
-                    min = -100,
-                    max = 100,
+                    min = -1000,
+                    max = 1000,
                     step = 1,
                     get = function ()
                         return self.db.profile.units[unit].offsetX
@@ -1169,14 +1239,14 @@ function Icons:BuildGeneralOptions(unit)
                         self.db.profile.units[unit].offsetX = value
                         self:UpdateFrame()
                     end,
-                    order = 40,
+                    order = 90,
                 },
                 offsetY = {
                     type = "range",
                     name = "Icon Frame Offset Y",
                     desc = "",
-                    min = -100,
-                    max = 100,
+                    min = -1000,
+                    max = 1000,
                     step = 1,
                     get = function ()
                         return self.db.profile.units[unit].offsetY
@@ -1185,7 +1255,7 @@ function Icons:BuildGeneralOptions(unit)
                         self.db.profile.units[unit].offsetY = value
                         self:UpdateFrame()
                     end,
-                    order = 45,
+                    order = 100,
                 },
             }
         }

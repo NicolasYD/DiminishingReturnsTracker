@@ -187,7 +187,6 @@ function Icons:CreateFrame(unit, category)
     local function CreateColoredBorder(parent, color, size)
         size = size or 1
         color = color or {1, 1, 1, 1}
-
         local borders = {}
 
         borders.top = parent:CreateTexture(nil, "OVERLAY")
@@ -217,45 +216,64 @@ function Icons:CreateFrame(unit, category)
         return borders
     end
 
-
+    -- Initialize container tables if not already created
+    self.unitContainers = self.unitContainers or {}
     self.frames = self.frames or {}
     self.frames[unit] = self.frames[unit] or {}
 
-    local frame = CreateFrame("Frame", "DRTFrame." .. unit .. "." .. category, UIParent)
+    -- Create the container frame for this unit if it doesn't exist
+    if not self.unitContainers[unit] then
+        local container = CreateFrame("Frame", "DRTContainer." .. unit, UIParent)
+        self.unitContainers[unit] = container
+    end
+
+    local container = self.unitContainers[unit]
+
+    -- Create the container texture
+    container.texture = container:CreateTexture(nil, "OVERLAY")
+    container.texture:SetAllPoints()
+
+    -- Create the container text label
+    container.text = container:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    container.text:SetPoint("CENTER", container, "CENTER", 0, 0)
+    container.text:SetDrawLayer("OVERLAY", 2)
+
+    -- Create the category frame
+    local frame = CreateFrame("Frame", "DRTFrame." .. unit .. "." .. category, container)
     self.frames[unit][category] = frame
 
-    -- Icon texture
+    -- Create the icon texture
     frame.icon = frame:CreateTexture(nil, "BACKGROUND")
     frame.icon:SetAllPoints()
 
-    -- Cooldown spiral
+    -- Create the cooldown spiral
     frame.cooldown = CreateFrame("Cooldown", nil, frame, "CooldownFrameTemplate")
     frame.cooldown:SetAllPoints()
 
-    -- Border
+    -- Create the border textures
     frame.border = CreateFrame("Frame", nil, frame)
     frame.border:SetAllPoints()
     frame.border:SetFrameLevel(frame.cooldown:GetFrameLevel() + 1)
     frame.borderTextures = CreateColoredBorder(frame.border)
 
-    -- DR indicator frame
+    -- Create the DR indicator frame
     frame.drIndicator = CreateFrame("Frame", nil, frame)
     frame.drIndicator:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
     frame.drIndicator:SetFrameLevel(frame.border:GetFrameLevel() + 1)
 
-    -- DR indicator texture
+    -- Create the DR indicator texture
     frame.drIndicator.texture = frame.drIndicator:CreateTexture(nil, "OVERLAY")
     frame.drIndicator.texture:SetAllPoints()
     frame.drIndicator.texture:SetDrawLayer("OVERLAY", 1)
     frame.drIndicator.texture:SetColorTexture(0, 0, 0, 1)
 
-    -- DR indicator border
+    -- Create the DR indicator border
     frame.drIndicator.border = CreateFrame("Frame", nil, frame.drIndicator)
     frame.drIndicator.border:SetAllPoints()
     frame.drIndicator.border:SetFrameLevel(frame.drIndicator:GetFrameLevel() + 1)
     frame.drIndicator.borderTextures = CreateColoredBorder(frame.drIndicator.border)
 
-    -- DR indicator text label
+    -- Create the DR indicator text label
     frame.drIndicator.text = frame.drIndicator:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     frame.drIndicator.text:SetPoint("CENTER", frame.drIndicator, "CENTER", 0, 0)
     frame.drIndicator.text:SetDrawLayer("OVERLAY", 2)
@@ -564,6 +582,7 @@ function Icons:ShowDRIcons(drCategory, unitGUID)
                         self:SetScript("OnUpdate", nil)
                         self:SetAlpha(0)
                         self.active = false
+                        Icons:UpdateFrame()
                     end
                 end)
             end
@@ -588,9 +607,14 @@ function Icons:UpdateFrame()
 
     for unit in pairs(self.frames) do
         local activeFrames = {}
+        local enabledFrameCount = 0
 
         for category, frame in pairs(self.frames[unit]) do
             frame.enabled = self.db.profile.units[unit].categories[category].enabled
+
+            if frame.enabled then
+                enabledFrameCount = enabledFrameCount + 1
+            end
 
             if frame.active and frame.enabled then
                 table.insert(activeFrames, {
@@ -610,18 +634,36 @@ function Icons:UpdateFrame()
         local lastFrame
         local settings = self.db.profile.units[unit]
 
+        local container = self.unitContainers[unit]
+        container:ClearAllPoints()
+        container:SetPoint(settings.iconPoint, settings.anchorTo, settings.anchorPoint, settings.offsetX, settings.offsetY)
+        container:SetHeight(settings.frameSize)
+        container:SetWidth(enabledFrameCount * settings.frameSize + math.max(0, enabledFrameCount - 1) * settings.iconsSpacing)
+
+        self:MoveFrame(container, unit, function (f)
+            ACR:NotifyChange("DRT") -- Update values in options
+        end)
+
+        if self.db.profile.units[unit].lockPosition then
+            container.texture:SetColorTexture(0, 0, 0, 0) -- Alpha = 0
+            container.text:SetText("")
+        else
+            container.texture:SetColorTexture(0, 0, 0, 0.4) -- Alpha = 0.4
+            container.text:SetText("DRT " .. unit)
+        end
+
         for _, entry in ipairs(activeFrames) do
             local frame = entry.frame
             frame:SetSize(settings.frameSize, settings.frameSize)
             frame:ClearAllPoints()
 
+            local direction = settings.growIcons
+            local iconPoint = growDirection[direction].iconPoint
+            local anchorPoint = growDirection[direction].anchorPoint
+            local spacing = settings.iconsSpacing
             if not lastFrame then
-                frame:SetPoint(settings.iconPoint, settings.anchorTo, settings.anchorPoint, settings.offsetX, settings.offsetY)
+                frame:SetPoint(iconPoint, self.unitContainers[unit], iconPoint)
             else
-                local direction = settings.growIcons
-                local iconPoint = growDirection[direction].iconPoint
-                local anchorPoint = growDirection[direction].anchorPoint
-                local spacing = settings.iconsSpacing
 
                 frame:SetPoint(
                     iconPoint,
@@ -843,7 +885,8 @@ end
 
 
 function Icons:MoveFrame(frame, unit, onStopCallback)
-    local isLocked = self.db.profile.units[unit].lockPosition
+    local settings = self.db.profile.units[unit]
+    local isLocked = settings.lockPosition
 
     if isLocked then
         -- Disable dragging
@@ -859,11 +902,40 @@ function Icons:MoveFrame(frame, unit, onStopCallback)
         frame:RegisterForDrag("LeftButton")
         frame:SetClampedToScreen(true)
 
-        frame:SetScript("OnDragStart", frame.StartMoving)
-        frame:SetScript("OnDragStop", function(self)
-            self:StopMovingOrSizing()
-            if type(onStopCallback) == "function" then
-                onStopCallback(self)
+        -- Save the original anchor
+        local origPoint, origRelativeTo, origRelativePoint, _, _ = frame:GetPoint()
+
+        local dragStartX, dragStartY
+
+        frame:SetScript("OnDragStart", function(f)
+            dragStartX, dragStartY = f:GetCenter()
+            f:StartMoving()
+        end)
+
+        frame:SetScript("OnDragStop", function(f)
+            f:StopMovingOrSizing()
+
+            local oldOffsetX = settings.offsetX
+            local oldOffsetY = settings.offsetY
+
+            local newX, newY = f:GetCenter()
+            if newX and newY and dragStartX and dragStartY then
+                local deltaX = newX - dragStartX
+                local deltaY = newY - dragStartY
+
+                local newOffsetX = (oldOffsetX or 0) + deltaX
+                local newOffsetY = (oldOffsetY or 0) + deltaY
+
+                -- Reapply the original anchor with updated offsets
+                settings.offsetX = newOffsetX
+                settings.offsetY = newOffsetY
+
+                f:ClearAllPoints()
+                f:SetPoint(origPoint, origRelativeTo, origRelativePoint, newOffsetX, newOffsetY)
+
+                if type(onStopCallback) == "function" then
+                    onStopCallback(f)
+                end
             end
         end)
     end
@@ -1126,18 +1198,8 @@ function Icons:BuildGeneralOptions(unit)
                         return self.db.profile.units[unit].lockPosition
                     end,
                     set = function(_, value)
-                        local frame = Icons.frames[unit]["stun"]
                         self.db.profile.units[unit].lockPosition = value
-                        Icons:MoveFrame(frame, unit, function(self)
-                            local anchorPoint, _, iconPoint, offsetX, offsetY = self:GetPoint()
-                            local settings = Icons.db.profile.units[unit]
-                            settings.anchorPoint = anchorPoint
-                            settings.anchorTo = "UIParent"
-                            settings.iconPoint = iconPoint
-                            settings.offsetX = offsetX
-                            settings.offsetY = offsetY
-                            ACR:NotifyChange("DRT")
-                        end)
+                        self:UpdateFrame()
                     end,
                     order = 10,
                 },
@@ -1159,7 +1221,7 @@ function Icons:BuildGeneralOptions(unit)
                         self:UpdateFrame()
                     end,
                     disabled = function ()
-                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled or not self.db.profile.units[unit].lockPosition
+                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled
                     end,
                     order = 30,
                 },
@@ -1175,7 +1237,7 @@ function Icons:BuildGeneralOptions(unit)
                         end)
                     end,
                     disabled = function ()
-                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled or not self.db.profile.units[unit].lockPosition
+                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled
                     end,
                     order = 40,
                 },
@@ -1198,7 +1260,7 @@ function Icons:BuildGeneralOptions(unit)
                         self:UpdateFrame()
                     end,
                     disabled = function ()
-                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled or not self.db.profile.units[unit].lockPosition
+                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled
                     end,
                     order = 60,
                 },
@@ -1215,7 +1277,7 @@ function Icons:BuildGeneralOptions(unit)
                         self:UpdateFrame()
                     end,
                     disabled = function ()
-                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled or not self.db.profile.units[unit].lockPosition
+                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled
                     end,
                     order = 70,
                 },

@@ -1,3 +1,8 @@
+v11.2.0.4-beta
+- Added option to move the icons by mouse if unlocked.
+- Increased the range of the sliders to move the icons.
+- Rearranged settings in options window.
+
 v11.2.0.3-beta
 - Added a button to copy settings from another unit.
 - Added a button to reset settings of a specific unit to defaults.

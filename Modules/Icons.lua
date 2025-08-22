@@ -447,6 +447,49 @@ function Icons:HideAllIcons()
 end
 
 
+function Icons:HideContainers(unitToken)
+    if not self.unitContainers then return end
+
+    if unitToken then
+        local frame = self.unitContainers[unitToken]
+        if frame and frame.Hide then
+            frame:Hide()
+        end
+    else
+        for unit, frame in pairs(self.unitContainers) do
+            if frame and frame.Hide then
+                frame:Hide()
+            end
+        end
+    end
+end
+
+
+function Icons:ShowContainers(unitToken)
+    if not self.unitContainers then return end
+
+    if unitToken then
+        local frame = self.unitContainers[unitToken]
+        if frame and frame.Hide then
+            frame:Show()
+        end
+    else
+        for unit, frame in pairs(self.unitContainers) do
+            if frame and frame.Show then
+                frame:Show()
+            end
+        end
+    end
+end
+
+
+function Icons:CancelTestmode()
+    if Icons.testing then
+        self:Test()
+    end
+end
+
+
 function Icons:ResetDRData()
     if self.trackedPlayers then
         for unitGUID, _ in pairs(self.trackedPlayers) do

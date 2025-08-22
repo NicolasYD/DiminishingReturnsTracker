@@ -19,9 +19,18 @@ end
 function Icons:OnEnable()
     local drCategories = DRList:GetCategories()
     drCategories["taunt"] = nil
+
+    self:ShowContainers()
+
+    self.unitContainers = self.unitContainers or {}
+    self.frames = self.frames or {}
+
     for unitToken in pairs(self.db.profile.units) do
+        self.frames[unitToken] = self.frames[unitToken] or {}
         for drCategory in pairs(drCategories) do
-            self:CreateFrame(unitToken, drCategory)
+            if not self.frames[unitToken][drCategory] then
+                self:CreateFrame(unitToken, drCategory)
+            end
         end
     end
     self:UpdateFrame()
@@ -29,7 +38,13 @@ end
 
 
 function Icons:OnDisable()
-    self:HideAllIcons()
+    self:CancelTestmode()
+    self:HideContainers()
+end
+
+
+function Icons:OnProfileChanged()
+    self:UpdateFrame()
 end
 
 
@@ -216,10 +231,6 @@ function Icons:CreateFrame(unit, category)
         return borders
     end
 
-    -- Initialize container tables if not already created
-    self.unitContainers = self.unitContainers or {}
-    self.frames = self.frames or {}
-    self.frames[unit] = self.frames[unit] or {}
 
     -- Create the container frame for this unit if it doesn't exist
     if not self.unitContainers[unit] then
@@ -422,9 +433,7 @@ end
 function Icons:PLAYER_ENTERING_WORLD()
     local inInstance, instanceType = IsInInstance()
     if inInstance and instanceType == "arena" then
-        if Icons.testing then
-            self:Test()
-        end
+        self:CancelTestmode()
     end
 end
 
@@ -869,9 +878,7 @@ end
 
 
 function Icons:ResetModule()
-    if Icons.testing then
-        self:Test()
-    end
+    self:CancelTestmode()
     self.db:ResetProfile()
     self:UpdateFrame()
 end
@@ -891,7 +898,6 @@ function Icons:ResetUnitSettings(unit)
 
     local defaults = self.db.defaults.profile.units[unit]
     if not defaults then
-        print("No defaults found for unit:", unit)
         return
     end
 
@@ -1585,6 +1591,11 @@ function Icons:GetOptions()
                     end,
                     set = function (_, value)
                         self.db.profile.units[unit].enabled = value
+                        if value then
+                            self:ShowContainers(umit)
+                        else
+                            self:HideContainers(unit)
+                        end
                         self:UpdateFrame()
                     end,
                     disabled = function ()

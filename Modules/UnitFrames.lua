@@ -1,10 +1,10 @@
 local DRT = LibStub("AceAddon-3.0"):GetAddon("DRT")
 local ACR = LibStub("AceConfigRegistry-3.0")
-local Icons = DRT:NewModule("Icons", "AceEvent-3.0")
+local UF = DRT:NewModule("UnitFrames", "AceEvent-3.0")
 
 local DRList = LibStub("DRList-1.0")
 
-function Icons:OnInitialize()
+function UF:OnInitialize()
     self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
     self:RegisterEvent("PLAYER_TARGET_CHANGED")
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -16,7 +16,7 @@ function Icons:OnInitialize()
 end
 
 
-function Icons:OnEnable()
+function UF:OnEnable()
     local drCategories = DRList:GetCategories()
     drCategories["taunt"] = nil
 
@@ -37,18 +37,18 @@ function Icons:OnEnable()
 end
 
 
-function Icons:OnDisable()
+function UF:OnDisable()
     self:CancelTestmode()
     self:HideContainers()
 end
 
 
-function Icons:OnProfileChanged()
+function UF:OnProfileChanged()
     self:UpdateFrame()
 end
 
 
-function Icons:SetupDB()
+function UF:SetupDB()
     local defaultCategories = {
         ["*"] = {
             priority = 0,
@@ -138,7 +138,7 @@ function Icons:SetupDB()
     end
 
 
-    self.db = DRT.db:RegisterNamespace("Icons", {
+    self.db = DRT.db:RegisterNamespace("UnitFrames", {
         profile = {
             units = {
                 player = mergeTables(sharedOptions, {
@@ -198,7 +198,7 @@ function Icons:SetupDB()
 end
 
 
-function Icons:CreateFrame(unit, category)
+function UF:CreateFrame(unit, category)
     local function CreateColoredBorder(parent, color, size)
         size = size or 1
         color = color or {1, 1, 1, 1}
@@ -291,8 +291,8 @@ function Icons:CreateFrame(unit, category)
 end
 
 
-function Icons:COMBAT_LOG_EVENT_UNFILTERED()
-    if Icons.testing then return end
+function UF:COMBAT_LOG_EVENT_UNFILTERED()
+    if UF.testing then return end
 
 
     local function GetDebuffDuration(unitToken, spellID)
@@ -401,8 +401,8 @@ function Icons:COMBAT_LOG_EVENT_UNFILTERED()
 end
 
 
-function Icons:PLAYER_TARGET_CHANGED()
-    if Icons.testing then return end
+function UF:PLAYER_TARGET_CHANGED()
+    if UF.testing then return end
 
     local targetGUID = UnitGUID("target")
     local trackedUnit = self.trackedPlayers and self.trackedPlayers[targetGUID]
@@ -430,7 +430,7 @@ function Icons:PLAYER_TARGET_CHANGED()
 end
 
 
-function Icons:PLAYER_ENTERING_WORLD()
+function UF:PLAYER_ENTERING_WORLD()
     local inInstance, instanceType = IsInInstance()
     if inInstance and instanceType == "arena" then
         self:CancelTestmode()
@@ -438,14 +438,14 @@ function Icons:PLAYER_ENTERING_WORLD()
 end
 
 
-function Icons:GROUP_ROSTER_UPDATE()
+function UF:GROUP_ROSTER_UPDATE()
     self:HideAllIcons()
     self:ResetDRData()
     self:SetPartyAnchorTo()
 end
 
 
-function Icons:HideAllIcons()
+function UF:HideAllIcons()
     if self.frames then
         for unit, _ in pairs(self.frames) do
             for category, _ in pairs(self.frames[unit]) do
@@ -456,7 +456,7 @@ function Icons:HideAllIcons()
 end
 
 
-function Icons:HideContainers(unitToken)
+function UF:HideContainers(unitToken)
     if not self.unitContainers then return end
 
     if unitToken then
@@ -474,7 +474,7 @@ function Icons:HideContainers(unitToken)
 end
 
 
-function Icons:ShowContainers(unitToken)
+function UF:ShowContainers(unitToken)
     if not self.unitContainers then return end
 
     if unitToken then
@@ -492,14 +492,14 @@ function Icons:ShowContainers(unitToken)
 end
 
 
-function Icons:CancelTestmode()
-    if Icons.testing then
+function UF:CancelTestmode()
+    if UF.testing then
         self:Test()
     end
 end
 
 
-function Icons:ResetDRData()
+function UF:ResetDRData()
     if self.trackedPlayers then
         for unitGUID, _ in pairs(self.trackedPlayers) do
             for drCategory, _ in pairs(self.trackedPlayers[unitGUID]) do
@@ -510,7 +510,7 @@ function Icons:ResetDRData()
 end
 
 
-function Icons:SetPartyAnchorTo()
+function UF:SetPartyAnchorTo()
     local partyMember = {
         "party1",
         "party2",
@@ -539,7 +539,7 @@ function Icons:SetPartyAnchorTo()
 end
 
 
-function Icons:GetUnitTokens(unitGUID)
+function UF:GetUnitTokens(unitGUID)
     local unitTokens = {
         "player", "target", "focus",
         "party1", "party2", "party3", "party4",
@@ -557,7 +557,7 @@ function Icons:GetUnitTokens(unitGUID)
 end
 
 
-function Icons:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
+function UF:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
     self.trackedPlayers = self.trackedPlayers or {}
     self.trackedPlayers[unitGUID] = self.trackedPlayers[unitGUID] or {}
     self.trackedPlayers[unitGUID][drCategory] = self.trackedPlayers[unitGUID][drCategory] or {}
@@ -572,9 +572,9 @@ function Icons:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
 end
 
 
-function Icons:ShowDRIcons(drCategory, unitGUID)
+function UF:ShowDRIcons(drCategory, unitGUID)
     local unitTokens
-    if Icons.testing then
+    if UF.testing then
         unitTokens = {unitGUID}
     else
         unitTokens = self:GetUnitTokens(unitGUID)
@@ -634,7 +634,7 @@ function Icons:ShowDRIcons(drCategory, unitGUID)
                         self:SetScript("OnUpdate", nil)
                         self:SetAlpha(0)
                         self.active = false
-                        Icons:UpdateFrame()
+                        UF:UpdateFrame()
                     end
                 end)
             end
@@ -645,7 +645,7 @@ function Icons:ShowDRIcons(drCategory, unitGUID)
 end
 
 
-function Icons:UpdateFrame()
+function UF:UpdateFrame()
     if not self.frames then
         return
     end
@@ -786,7 +786,7 @@ function Icons:UpdateFrame()
 end
 
 
-function Icons:Test()
+function UF:Test()
     local count = 0
 
 
@@ -822,12 +822,12 @@ function Icons:Test()
         for drCategory in pairs(drCategories) do
             local spellID = GetRandomSpell(spellList, drCategory)
             for unitToken in pairs(units) do
-                Icons.trackedPlayers = Icons.trackedPlayers or {}
-                Icons.trackedPlayers[unitToken] = Icons.trackedPlayers[unitToken] or {}
-                Icons.trackedPlayers[unitToken][drCategory] = Icons.trackedPlayers[unitToken][drCategory] or {}
+                UF.trackedPlayers = UF.trackedPlayers or {}
+                UF.trackedPlayers[unitToken] = UF.trackedPlayers[unitToken] or {}
+                UF.trackedPlayers[unitToken][drCategory] = UF.trackedPlayers[unitToken][drCategory] or {}
 
                 local currentTime = GetTime()
-                local data = Icons.trackedPlayers[unitToken][drCategory]
+                local data = UF.trackedPlayers[unitToken][drCategory]
                 data.startTime = currentTime
                 data.resetTime = DRList:GetResetTime(drCategory)
                 data.expirationTime = data.startTime + data.resetTime
@@ -843,10 +843,10 @@ function Icons:Test()
             end
         end
 
-        Icons.testTimer = C_Timer.NewTimer(reset, function()
+        UF.testTimer = C_Timer.NewTimer(reset, function()
             count = count + 1
             if count == 3 then
-                Icons.trackedPlayers = {}
+                UF.trackedPlayers = {}
                 count = 0
             end
             TestIcons()
@@ -854,12 +854,12 @@ function Icons:Test()
     end
 
 
-    if not Icons.testing then
-        Icons.testing = true
+    if not UF.testing then
+        UF.testing = true
         TestIcons()
     else
-        Icons.testing = false
-        Icons.trackedPlayers = {}
+        UF.testing = false
+        UF.trackedPlayers = {}
         if self.frames then
             for unit in pairs(self.frames) do
                 for drCategory in pairs(self.frames[unit]) do
@@ -869,22 +869,22 @@ function Icons:Test()
                 end
             end
         end
-        if Icons.testTimer then
-            Icons.testTimer:Cancel()
-            Icons.testTimer = nil
+        if UF.testTimer then
+            UF.testTimer:Cancel()
+            UF.testTimer = nil
         end
     end
 end
 
 
-function Icons:ResetModule()
+function UF:ResetModule()
     self:CancelTestmode()
     self.db:ResetProfile()
     self:UpdateFrame()
 end
 
 
-function Icons:ResetUnitSettings(unit)
+function UF:ResetUnitSettings(unit)
     -- Deep copy utility function
     local function DeepCopy(from)
         if type(from) ~= "table" then return from end
@@ -907,7 +907,7 @@ function Icons:ResetUnitSettings(unit)
 end
 
 
-function Icons:CopySettings(fromUnit, toUnit, excludeList)
+function UF:CopySettings(fromUnit, toUnit, excludeList)
     local fromSettings = self.db.profile.units[fromUnit]
     local toSettings = self.db.profile.units[toUnit]
     if not fromSettings or not toSettings then return end
@@ -933,7 +933,7 @@ function Icons:CopySettings(fromUnit, toUnit, excludeList)
 end
 
 
-function Icons:MoveFrame(frame, unit, onStopCallback)
+function UF:MoveFrame(frame, unit, onStopCallback)
     local settings = self.db.profile.units[unit]
     local isLocked = settings.lockPosition
 
@@ -991,7 +991,7 @@ function Icons:MoveFrame(frame, unit, onStopCallback)
 end
 
 
-function Icons:BuildGeneralOptions(unit)
+function UF:BuildGeneralOptions(unit)
     local anchorPointValues = {
         TOP = "TOP",
         TOPLEFT = "TOPLEFT",
@@ -1377,7 +1377,7 @@ function Icons:BuildGeneralOptions(unit)
 end
 
 
-function Icons:BuildDiminishingReturnsOptions(unit)
+function UF:BuildDiminishingReturnsOptions(unit)
     local diminishingReturnsOptions = {
         separator1 = {
             type = "description",
@@ -1518,28 +1518,29 @@ function Icons:BuildDiminishingReturnsOptions(unit)
 end
 
 
-function Icons:GetOptions()
+function UF:GetOptions()
     if not self.db then
         self:SetupDB()
     end
 
     local options = {
         type = "group",
-        name = "Icons",
+        name = "UnitFrames",
         childGroups = "tab",
+        order = 1,
         args = {
             isEnabled = {
                 type = "toggle",
                 name = "Enable Module",
                 get = function()
-                    return DRT.db.profile.modules["Icons"].enabled
+                    return DRT.db.profile.modules["UnitFrames"].enabled
                 end,
                 set = function(_, value)
-                    DRT.db.profile.modules["Icons"].enabled = value
+                    DRT.db.profile.modules["UnitFrames"].enabled = value
                     if value then
-                        DRT:EnableModule("Icons")
+                        DRT:EnableModule("UnitFrames")
                     else
-                        DRT:DisableModule("Icons")
+                        DRT:DisableModule("UnitFrames")
                     end
                 end,
                 order = 100

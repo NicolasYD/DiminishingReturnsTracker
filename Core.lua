@@ -11,7 +11,7 @@ function DRT:OnInitialize()
                 ['*'] = {
                     enabled = false,
                 },
-                Icons = {
+                UnitFrames = {
                     enabled = true,
                 },
             }

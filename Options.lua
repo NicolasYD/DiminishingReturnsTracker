@@ -47,7 +47,12 @@ function DRT:GetOptions()
 		end
 	end
 
-	self.options.plugins.profiles = {profiles = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)} -- Profiles management tab
+	-- Profiles management tab
+	self.options.plugins.profiles = {
+		profiles = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
+	}
+	self.options.plugins.profiles.profiles.order = 100
+
 	LibStub("AceConfig-3.0"):RegisterOptionsTable("DRT", self.options)
 	LibStub("AceConfigDialog-3.0"):AddToBlizOptions("DRT", "DRT")
 end

@@ -1,6 +1,6 @@
 local DRT = LibStub("AceAddon-3.0"):GetAddon("DRT")
 local ACR = LibStub("AceConfigRegistry-3.0")
-local NP = DRT:NewModule("Nameplates", "AceEvent-3.0")
+local NP = DRT:NewModule("NP", "AceEvent-3.0")
 
 local DRList = LibStub("DRList-1.0")
 
@@ -26,7 +26,7 @@ end
 
 
 function NP:SetupDB()
-    self.db = DRT.db:RegisterNamespace("Nameplates", {
+    self.db = DRT.db:RegisterNamespace("NP", {
         profile = {
             -- Settings here
         }
@@ -54,14 +54,14 @@ function NP:GetOptions()
                 type = "toggle",
                 name = "Enable Module",
                 get = function()
-                    return DRT.db.profile.modules["Nameplates"].enabled
+                    return DRT.db.profile.modules["NP"].enabled
                 end,
                 set = function(_, value)
-                    DRT.db.profile.modules["Nameplates"].enabled = value
+                    DRT.db.profile.modules["NP"].enabled = value
                     if value then
-                        DRT:EnableModule("Nameplates")
+                        DRT:EnableModule("NP")
                     else
-                        DRT:DisableModule("Nameplates")
+                        DRT:DisableModule("NP")
                     end
                 end,
                 order = 100

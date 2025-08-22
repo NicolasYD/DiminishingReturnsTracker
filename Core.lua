@@ -11,7 +11,10 @@ function DRT:OnInitialize()
                 ['*'] = {
                     enabled = false,
                 },
-                UnitFrames = {
+                UF = {
+                    enabled = true,
+                },
+				NP = {
                     enabled = true,
                 },
             }

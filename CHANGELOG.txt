@@ -1,3 +1,6 @@
+v11.2.0.6-beta
+- Fixed a bug, where Testmode would not trigger.
+
 v11.2.0.5-beta
 - Added option to manage profiles.
 - Minor changes that affect frame visibility.

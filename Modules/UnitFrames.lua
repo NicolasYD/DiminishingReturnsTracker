@@ -1,6 +1,6 @@
 local DRT = LibStub("AceAddon-3.0"):GetAddon("DRT")
 local ACR = LibStub("AceConfigRegistry-3.0")
-local UF = DRT:NewModule("UnitFrames", "AceEvent-3.0")
+local UF = DRT:NewModule("UF", "AceEvent-3.0")
 
 local DRList = LibStub("DRList-1.0")
 
@@ -138,7 +138,7 @@ function UF:SetupDB()
     end
 
 
-    self.db = DRT.db:RegisterNamespace("UnitFrames", {
+    self.db = DRT.db:RegisterNamespace("UF", {
         profile = {
             units = {
                 player = mergeTables(sharedOptions, {
@@ -1533,14 +1533,14 @@ function UF:GetOptions()
                 type = "toggle",
                 name = "Enable Module",
                 get = function()
-                    return DRT.db.profile.modules["UnitFrames"].enabled
+                    return DRT.db.profile.modules["UF"].enabled
                 end,
                 set = function(_, value)
-                    DRT.db.profile.modules["UnitFrames"].enabled = value
+                    DRT.db.profile.modules["UF"].enabled = value
                     if value then
-                        DRT:EnableModule("UnitFrames")
+                        DRT:EnableModule("UF")
                     else
-                        DRT:DisableModule("UnitFrames")
+                        DRT:DisableModule("UF")
                     end
                 end,
                 order = 100

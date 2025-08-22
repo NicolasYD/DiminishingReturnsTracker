@@ -18,6 +18,10 @@ function DRT:OnInitialize()
         }
     })
 
+	self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
+	self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
+	self.db.RegisterCallback(self, "OnProfileReset", "OnProfileChanged")
+
     -- Disable modules based on saved profile settings (AceAddon will auto-enable the module at startup, regardless of saved profile settings)
     for name, module in self:IterateModules() do
         local modSettings = self.db.profile.modules[name]
@@ -41,6 +45,17 @@ end
 
 -- Called when the addon is disabled
 function DRT:OnDisable()
+end
+
+
+function DRT:OnProfileChanged()
+	for name, module in self:IterateModules() do
+        if type(module.OnProfileChanged) == "function" then
+            module:OnProfileChanged()
+        else
+            return
+        end
+    end
 end
 
 

@@ -13,3 +13,7 @@ Core.lua
 Options.lua
 
 Modules/UnitFrames.lua
+
+#@do-not-package@
+Modules/Nameplates.lua
+#@end-do-not-package@

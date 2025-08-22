@@ -65,10 +65,13 @@ function DRT:OpenOptions()
 end
 
 
+-- Execute the test function of every enabled module
 function DRT:TestModules()
     for name, module in self:IterateModules() do
         if type(module.Test) == "function" then
-            module:Test()
+			if self.db.profile.modules[name].enabled then
+            	module:Test()
+			end
         else
             return
         end

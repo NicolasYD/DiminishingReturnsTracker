@@ -90,6 +90,8 @@ function NP:SetupDB()
             -- Icon settings
             cropIcons = true,
             frameSize = 30,
+            growIcons = "RIGHT",
+            iconsSpacing = 5,
 
             -- Cooldown settings
             cooldown = true,
@@ -185,7 +187,7 @@ function NP:COMBAT_LOG_EVENT_UNFILTERED()
             for i= 1, 40 do
                 local unitToken = "nameplate" .. i
                 debuffDuration, _, _ = GetDebuffDuration(unitToken, spellID)
-                if debuffDuration then print(debuffDuration) break end
+                if debuffDuration then break end
             end
 
             data.startTime = currentTime
@@ -241,7 +243,6 @@ end
 
 
 function NP:CreateFrames(nameplateUnit, nameplateFrame)
-    print("CreateFrame" .. nameplateUnit)
     -- Create the container frame and store the reference
     local container = CreateFrame("Frame", "NPContainer." .. nameplateUnit, nameplateFrame)
     self.unitContainers[nameplateUnit] = container
@@ -259,7 +260,6 @@ function NP:CreateFrames(nameplateUnit, nameplateFrame)
     for drCategory, _ in pairs(drCategories) do
         -- Create the DR category frame, center it on the container frame and store the reference
         local frame = CreateFrame("Frame", "NPFrame." .. nameplateUnit .. "." .. drCategory, container)
-        frame:SetPoint("BOTTOMRIGHT", nameplateFrame, "BOTTOMRIGHT", 0, 0)
         self.categoryFrames[nameplateUnit] = self.categoryFrames[nameplateUnit] or {}
         self.categoryFrames[nameplateUnit][drCategory] = frame
 
@@ -281,7 +281,14 @@ function NP:StyleFrames()
     local settings = self.db.profile
 
     for nameplateUnit, _ in pairs(self.unitContainers) do
+        local nameplateFrame = C_NamePlate.GetNamePlateForUnit(nameplateUnit)
         local container = self.unitContainers[nameplateUnit]
+
+        container:SetHeight(settings.frameSize)
+        container:SetWidth(settings.frameSize)
+        container:SetPoint("BOTTOMLEFT", nameplateFrame, "BOTTOMLEFT", 0, 0)
+
+        container.texture:SetColorTexture(1,1,1,1)
 
         for drCategory, _ in pairs(drCategories) do
             local frame = self.categoryFrames[nameplateUnit][drCategory]
@@ -305,7 +312,69 @@ end
 
 
 function NP:UpdateFrames()
-    print("UpdateFrames")
+    if not self.categoryFrames then
+        return
+    end
+
+    local settings = self.db.profile
+
+    local growDirection = {
+        LEFT = {iconPoint = "RIGHT", anchorPoint = "LEFT"},
+        RIGHT = {iconPoint = "LEFT", anchorPoint = "RIGHT"},
+        UP = {iconPoint = "BOTTOM", anchorPoint = "TOP"},
+        DOWN = {iconPoint = "TOP", anchorPoint = "BOTTOM"},
+    }
+
+    for nameplateUnit in pairs(self.categoryFrames) do
+        local nameplateFrame = C_NamePlate.GetNamePlateForUnit(nameplateUnit)
+        local activeFrames = {}
+        local enabledFrameCount = 0
+
+        for category, frame in pairs(self.categoryFrames[nameplateUnit]) do
+            frame.enabled = settings.drCategories[category].enabled
+
+            if frame.enabled then
+                enabledFrameCount = enabledFrameCount + 1
+            end
+
+            if frame.active and frame.enabled then
+                table.insert(activeFrames, {
+                    category = category,
+                    frame = frame,
+                    priority = settings.drCategories[category].priority,
+                })
+            else
+                frame:SetAlpha(0)
+            end
+        end
+
+        table.sort(activeFrames, function(a, b)
+            return a.priority > b.priority
+        end)
+
+
+        local lastFrame
+        for _, entry in ipairs(activeFrames) do
+            local frame = entry.frame
+            local direction = settings.growIcons
+            local iconPoint = growDirection[direction].iconPoint
+            local anchorPoint = growDirection[direction].anchorPoint
+            local spacing = settings.iconsSpacing
+            frame:ClearAllPoints()
+            if not lastFrame then
+                frame:SetPoint(iconPoint, self.unitContainers[nameplateUnit], iconPoint)
+            else
+                frame:SetPoint(
+                    iconPoint,
+                    lastFrame,
+                    anchorPoint,
+                    (anchorPoint == "RIGHT" and spacing) or (anchorPoint == "LEFT" and -spacing) or 0,
+                    (anchorPoint == "TOP" and spacing) or (anchorPoint == "BOTTOM" and -spacing) or 0
+                )
+            end
+            lastFrame = frame
+        end
+    end
 end
 
 
@@ -383,6 +452,99 @@ function NP:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
     end
 
     self:UpdateFrames()
+end
+
+
+function NP:Test()
+    local count = 0
+
+
+    local function GetRandomSpell(tbl, val)
+        local keys = {}
+        for k in pairs(tbl) do
+            table.insert(keys, k)
+        end
+
+        local tried = {}
+        while #tried < #keys do
+            local i
+            repeat
+                i = math.random(#keys)
+            until not tried[i]
+
+            tried[i] = true
+            local key = keys[i]
+            if tbl[key] == val then
+                return key
+            end
+        end
+    end
+
+
+    local function TestIcons()
+        local spellList = DRList:GetSpells()
+        local reset = DRList:GetResetTime("stun")
+
+        for drCategory, _ in pairs(drCategories) do
+            local spellID = GetRandomSpell(spellList, drCategory)
+            for i = 1, 40 do
+                local unitToken = "nameplate" .. i
+                local unitGUID = UnitGUID(unitToken)
+
+                if unitGUID then
+                    NP.trackedUnits = NP.trackedUnits or {}
+                    NP.trackedUnits[unitGUID] = NP.trackedUnits[unitGUID] or {}
+                    NP.trackedUnits[unitGUID][drCategory] = NP.trackedUnits[unitGUID][drCategory] or {}
+
+                    local currentTime = GetTime()
+                    local data = NP.trackedUnits[unitGUID][drCategory]
+                    data.startTime = currentTime
+                    data.resetTime = DRList:GetResetTime(drCategory)
+                    data.expirationTime = data.startTime + data.resetTime
+
+                    if data.diminished == nil or currentTime >= (data.expirationTime or 0) then -- is nil or DR expired
+                        local duration = 1
+                        data.diminished = DRList:NextDR(duration, drCategory)
+                    else
+                        data.diminished = DRList:NextDR(data.diminished, drCategory)
+                    end
+
+                    self:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
+                end
+            end
+        end
+
+        NP.testTimer = C_Timer.NewTimer(reset, function()
+            count = count + 1
+            if count == 3 then
+                -- NP.trackedUnits = {}
+                count = 0
+            end
+            TestIcons()
+        end)
+    end
+
+
+    if not NP.testing then
+        NP.testing = true
+        TestIcons()
+    else
+        NP.testing = false
+        NP.trackedUnits = {}
+        if self.categoryFrames then
+            for nameplateUnit in pairs(self.categoryFrames) do
+                for drCategory in pairs(self.categoryFrames[nameplateUnit]) do
+                    local frame = self.categoryFrames[nameplateUnit][drCategory]
+                    frame.active = false
+                    frame:SetAlpha(0)
+                end
+            end
+        end
+        if NP.testTimer then
+            NP.testTimer:Cancel()
+            NP.testTimer = nil
+        end
+    end
 end
 
 

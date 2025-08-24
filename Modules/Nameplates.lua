@@ -19,6 +19,7 @@ function NP:OnEnable()
     self.nameplateUnits = self.nameplatUnits or {}
     self.unitContainers = self.unitContainers or {}
     self.categoryFrames = self.categoryFrames or {}
+    self.trackedUnits = self.trackedUnits or {}
 end
 
 
@@ -71,11 +72,110 @@ end
 
 
 function NP:COMBAT_LOG_EVENT_UNFILTERED()
-    local timestamp, eventType, _, sourceGUID, sourceName, _, _, destGUID, destName, _, _, spellId, spellName = CombatLogGetCurrentEventInfo()
+    if NP.testing then return end
 
-    if eventType == "SPELL_AURA_APPLIED" then
-        -- Use DRList:ContainsCC(spellId) to check if this is a relevant DR spell
-        -- Then attach cooldown to nameplate associated with destGUID
+
+    local function GetDebuffDuration(unitToken, spellID)
+        if not UnitExists(unitToken) then return nil end
+
+        for index = 1, 255 do
+            local aura = C_UnitAuras.GetDebuffDataByIndex(unitToken, index, "HARMFUL")
+            if not aura then
+                break
+            end
+
+            if aura.spellId == spellID then
+                local timeLeft = aura.expirationTime and (aura.expirationTime - GetTime()) or 0
+                return aura.duration, aura.expirationTime, timeLeft
+            end
+        end
+
+        return nil
+    end
+
+
+    local _, eventType, _, _, _, _, _, destGUID, _, destFlags, _, spellID, _, _, auraType = CombatLogGetCurrentEventInfo()
+
+    -- Check all debuffs found in the combat log
+    if auraType == "DEBUFF" then
+        -- Get the DR category or exit immediately if current debuff doesn't have a DR
+        local drCategory, sharedCategories = DRList:GetCategoryBySpellID(spellID)
+        if not drCategory then return end
+
+        -- Check if unit that got the debuff is a player
+        local isPlayer = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_PLAYER) ~= 0
+        if not isPlayer and not DRList:IsPvECategory(drCategory) then return end
+
+        self.trackedUnits[destGUID] = self.trackedUnits[destGUID] or {}
+        self.trackedUnits[destGUID][drCategory] = self.trackedUnits[destGUID][drCategory] or {}
+
+        local data = self.trackedUnits[destGUID][drCategory]
+        local currentTime = GetTime()
+
+        if eventType == "SPELL_AURA_APPLIED" or eventType == "SPELL_AURA_REFRESH" then
+            -- Set how many times the DR category has been applied so far
+            if data.diminished == nil or currentTime >= (data.expirationTime or 0) then -- is nil or DR expired
+                local duration = 1
+                data.diminished = DRList:NextDR(duration, drCategory)
+            else
+                data.diminished = DRList:NextDR(data.diminished, drCategory)
+            end
+
+            local debuffDuration
+            for i= 1, 40 do
+                local unitToken = "nameplate" .. i
+                debuffDuration, _, _ = GetDebuffDuration(unitToken, spellID)
+                if debuffDuration then print(debuffDuration) break end
+            end
+
+            data.startTime = currentTime
+            if isPlayer then
+                data.resetTime = DRList:GetResetTime(drCategory) + (debuffDuration or 0)
+            else
+                data.resetTime = DRList:GetResetTime("npc") + (debuffDuration or 0)
+            end
+            data.expirationTime = data.startTime + data.resetTime
+            -- Trigger main DR category
+            self:StartOrUpdateDRTimer(drCategory, destGUID, spellID)
+
+            -- Trigger any shared DR categories
+            if sharedCategories then
+                for i = 1, #sharedCategories do
+                    if sharedCategories[i] ~= drCategory then
+                        self:StartOrUpdateDRTimer(sharedCategories[i], destGUID, spellID)
+                    end
+                end
+            end
+        end
+
+        -- The debuff has faded or refreshed, DR timer starts
+        if eventType == "SPELL_AURA_REMOVED" then
+            data.startTime = currentTime
+            if isPlayer then
+                data.resetTime = DRList:GetResetTime(drCategory)
+            else
+                data.resetTime = DRList:GetResetTime("npc")
+            end
+            data.expirationTime = data.startTime + data.resetTime
+
+            -- Trigger main DR category
+            self:StartOrUpdateDRTimer(drCategory, destGUID, spellID)
+
+            -- Trigger any shared DR categories
+            if sharedCategories then
+                for i = 1, #sharedCategories do
+                    if sharedCategories[i] ~= drCategory then
+                        self:StartOrUpdateDRTimer(sharedCategories[i], destGUID, spellID)
+                    end
+                end
+            end
+        end
+    end
+
+    if eventType == "UNIT_DIED" then
+        if self.trackedUnits and self.trackedUnits[destGUID] then
+            self.trackedUnits[destGUID] = nil
+        end
     end
 end
 

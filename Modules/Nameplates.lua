@@ -86,7 +86,17 @@ function NP:SetupDB()
                     enabled = false,
                 },
             },
-            -- Settings here
+
+            -- Icon settings
+            cropIcons = true,
+            frameSize = 30,
+
+            -- Cooldown settings
+            cooldown = true,
+            cooldownReverse = true,
+            cooldownSwipeAlpha = 0.6,
+            cooldownEdge = true,
+            cooldownNumbersHide = false,
         }
     })
 end
@@ -249,7 +259,7 @@ function NP:CreateFrames(nameplateUnit, nameplateFrame)
     for drCategory, _ in pairs(drCategories) do
         -- Create the DR category frame, center it on the container frame and store the reference
         local frame = CreateFrame("Frame", "NPFrame." .. nameplateUnit .. "." .. drCategory, container)
-        frame:SetPoint("CENTER", nameplateFrame, "CENTER", 0, 0)
+        frame:SetPoint("BOTTOMRIGHT", nameplateFrame, "BOTTOMRIGHT", 0, 0)
         self.categoryFrames[nameplateUnit] = self.categoryFrames[nameplateUnit] or {}
         self.categoryFrames[nameplateUnit][drCategory] = frame
 
@@ -268,19 +278,27 @@ end
 
 
 function NP:StyleFrames()
+    local settings = self.db.profile
+
     for nameplateUnit, _ in pairs(self.unitContainers) do
         local container = self.unitContainers[nameplateUnit]
 
         for drCategory, _ in pairs(drCategories) do
             local frame = self.categoryFrames[nameplateUnit][drCategory]
 
-            frame:SetSize(24, 24)
+            frame:SetSize(settings.frameSize, settings.frameSize)
+            if settings.cropIcons then
+                frame.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+            else
+                frame.icon:SetTexCoord(0, 1, 0, 1)
+            end
 
-            frame.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-
-            frame.cooldown:SetDrawEdge(true)
-            frame.cooldown:SetDrawSwipe(true)
-            frame.cooldown:SetSwipeColor(0, 0, 0, 0.75)
+            frame.cooldown:SetDrawBling(false)
+            frame.cooldown:SetDrawSwipe(settings.cooldown)
+            frame.cooldown:SetReverse(settings.cooldownReverse)
+            frame.cooldown:SetSwipeColor(0, 0, 0, settings.cooldownSwipeAlpha)
+            frame.cooldown:SetDrawEdge(settings.cooldown and settings.cooldownEdge)
+            frame.cooldown:SetHideCountdownNumbers(settings.cooldownNumbersHide)
         end
     end
 end
@@ -291,8 +309,80 @@ function NP:UpdateFrames()
 end
 
 
-function NP:StartOrUpdateDRTimer(drCategory, destGUID, spellID)
-    print("StartOrUpdateDRTimer")
+function NP:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
+--[[     self.trackedUnits[unitGUID] = self.trackedUnits[unitGUID] or {}
+    self.trackedUnits[unitGUID][drCategory] = self.trackedUnits[unitGUID][drCategory] or {} ]]
+
+    local data = self.trackedUnits[unitGUID][drCategory]
+
+    if spellID then
+        data.lastSpellID = spellID
+    end
+
+    local nameplateUnit
+    for unit, unitData in pairs(self.unitContainers) do
+        if unitData.unitGUID == unitGUID then
+            nameplateUnit = unit
+        end
+    end
+
+    local frame = self.categoryFrames[nameplateUnit] and self.categoryFrames[nameplateUnit][drCategory]
+    local categoryIcon = self.db.profile.drCategories[drCategory].icon
+
+    if frame then
+        local iconTexture
+        if categoryIcon == "dynamic" then
+            local spellInfo = C_Spell.GetSpellInfo(data.lastSpellID)
+            iconTexture = spellInfo.originalIconID
+        else
+            local spellInfo = C_Spell.GetSpellInfo(categoryIcon)
+            iconTexture = spellInfo.originalIconID
+        end
+
+        frame:SetAlpha(1)
+        frame.active = true
+
+        frame.icon:SetTexture(iconTexture)
+
+        frame.cooldown:SetCooldown(data.startTime, data.resetTime)
+
+        local diminishedText = {
+            [0.5] = "1",
+            [0.25] = "2",
+            [0] = "3",
+        }
+        local diminishedColor = {
+            [0.5] = {0, 1, 0, 1},
+            [0.25] = {1, 1, 0, 1},
+            [0] = {1, 0, 0, 1},
+        }
+
+        local text = diminishedText[data.diminished] or ""
+        local color = diminishedColor[data.diminished] or {1,1,1,1}
+
+--[[         frame.drIndicator.text:SetText(text)
+        frame.drIndicator.text:SetTextColor(unpack(color))
+
+        for _, tex in pairs(frame.borderTextures) do
+            tex:SetColorTexture(unpack(color))
+        end
+
+        for _, tex in pairs(frame.drIndicator.borderTextures) do
+            tex:SetColorTexture(unpack(color))
+        end ]]
+
+        frame:SetScript("OnUpdate", function(f, elapsed)
+            local currentTime = GetTime()
+            if currentTime >= data.expirationTime then
+                f:SetScript("OnUpdate", nil)
+                f:SetAlpha(0)
+                f.active = false
+                NP:UpdateFrames()
+            end
+        end)
+    end
+
+    self:UpdateFrames()
 end
 
 

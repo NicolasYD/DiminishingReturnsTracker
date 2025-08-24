@@ -36,6 +36,56 @@ end
 function NP:SetupDB()
     self.db = DRT.db:RegisterNamespace("NP", {
         profile = {
+            drCategories = {
+                ["*"] = {
+                    priority = 0,
+                    order = 0,
+                    icon = "dynamic",
+                    enabled = false,
+                },
+                stun = {
+                    priority = 7,
+                    order = 1,
+                    icon = "dynamic",
+                    enabled = true,
+                },
+                disorient = {
+                    priority = 6,
+                    order = 2,
+                    icon = "dynamic",
+                    enabled = true,
+                },
+                incapacitate = {
+                    priority = 5,
+                    order = 3,
+                    icon = "dynamic",
+                    enabled = true,
+                },
+                silence = {
+                    priority = 4,
+                    order = 4,
+                    icon = "dynamic",
+                    enabled = false,
+                },
+                disarm = {
+                    priority = 3,
+                    order = 5,
+                    icon = "dynamic",
+                    enabled = false,
+                },
+                knockback = {
+                    priority = 2,
+                    order = 6,
+                    icon = "dynamic",
+                    enabled = false,
+                },
+                root = {
+                    priority = 1,
+                    order = 7,
+                    icon = "dynamic",
+                    enabled = false,
+                },
+            },
             -- Settings here
         }
     })
@@ -238,6 +288,11 @@ end
 
 function NP:UpdateFrames()
     print("UpdateFrames")
+end
+
+
+function NP:StartOrUpdateDRTimer(drCategory, destGUID, spellID)
+    print("StartOrUpdateDRTimer")
 end
 
 

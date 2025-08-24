@@ -1527,7 +1527,7 @@ function UF:GetOptions()
         type = "group",
         name = "UnitFrames",
         childGroups = "tab",
-        order = 1,
+        order = 10,
         args = {
             isEnabled = {
                 type = "toggle",

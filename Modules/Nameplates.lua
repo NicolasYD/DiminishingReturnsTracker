@@ -3,7 +3,8 @@ local ACR = LibStub("AceConfigRegistry-3.0")
 local NP = DRT:NewModule("NP", "AceEvent-3.0")
 
 local DRList = LibStub("DRList-1.0")
-
+local drCategories = DRList:GetCategories()
+drCategories["taunt"] = nil -- Exclude taunts from DR categories
 
 function NP:OnInitialize()
 
@@ -15,8 +16,9 @@ function NP:OnEnable()
     self:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
     self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 
+    self.nameplateUnits = self.nameplatUnits or {}
     self.unitContainers = self.unitContainers or {}
-    self.frames = self.frames or {}
+    self.categoryFrames = self.categoryFrames or {}
 end
 
 
@@ -45,8 +47,16 @@ function NP:NAME_PLATE_UNIT_ADDED(_, nameplateUnit)
 
     if not unitGUID or not nameplateFrame then return end
 
-    if not self.unitContainers[unitGUID] then
-        self:CreateFrames(nameplateFrame, unitGUID)
+    -- Create DR frames for nameplates if they don't exist yet
+    if not self.unitContainers[nameplateUnit] then
+        self:CreateFrames(nameplateUnit, nameplateFrame)
+        self.unitContainers[nameplateUnit].unitGUID = unitGUID
+    end
+
+    -- Refresh DR frames for nameplates if they are reused
+    if self.unitContainers[nameplateUnit].unitGUID ~= unitGUID then
+        self:UpdateFrames()
+        self.unitContainers[nameplateUnit].unitGUID = unitGUID
     end
 end
 
@@ -57,9 +67,6 @@ function NP:NAME_PLATE_UNIT_REMOVED(_, nameplateUnit)
 
     if not nameplateFrame then return end
 
-    if unitGUID then
-        self.unitContainers[unitGUID] = nil
-    end
 end
 
 
@@ -73,47 +80,64 @@ function NP:COMBAT_LOG_EVENT_UNFILTERED()
 end
 
 
-function NP:CreateFrames(nameplateFrame, unitGUID)
-    print("CreateFrame" .. nameplateFrame:GetName())
-    -- Create the container frame for this unit if it doesn't exist
-    local container = CreateFrame("Frame", "NPContainer." .. unitGUID, nameplateFrame)
-    self.unitContainers[unitGUID] = container
+function NP:CreateFrames(nameplateUnit, nameplateFrame)
+    print("CreateFrame" .. nameplateUnit)
+    -- Create the container frame and store the reference
+    local container = CreateFrame("Frame", "NPContainer." .. nameplateUnit, nameplateFrame)
+    self.unitContainers[nameplateUnit] = container
 
-    -- Create the container texture
+    -- Create the container texture, make it cover the container frame and make it appear under the text label
     container.texture = container:CreateTexture(nil, "OVERLAY")
     container.texture:SetAllPoints()
+    container.texture:SetDrawLayer("OVERLAY", 1)
 
-    -- Create the container text label
+    -- Create the container text label, center it on the container frame and make it appear above the text label
     container.text = container:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     container.text:SetPoint("CENTER", container, "CENTER", 0, 0)
     container.text:SetDrawLayer("OVERLAY", 2)
 
-    -- Create the category frame
-    local frame = CreateFrame("Frame", nil, container)
-    frame:SetSize(24, 24)
-    frame:SetPoint("TOPRIGHT", nameplateFrame, "TOPRIGHT", -5, -5) -- Adjust position as needed
+    for drCategory, _ in pairs(drCategories) do
+        -- Create the DR category frame, center it on the container frame and store the reference
+        local frame = CreateFrame("Frame", "NPFrame." .. nameplateUnit .. "." .. drCategory, container)
+        frame:SetPoint("CENTER", nameplateFrame, "CENTER", 0, 0)
+        self.categoryFrames[nameplateUnit] = self.categoryFrames[nameplateUnit] or {}
+        self.categoryFrames[nameplateUnit][drCategory] = frame
 
-    -- Create the icon texture
-    frame.icon = frame:CreateTexture(nil, "BACKGROUND")
-    frame.icon:SetAllPoints()
-    frame.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark") -- Default texture
+        -- Create the icon texture and make it cover the category frame
+        frame.icon = frame:CreateTexture(nil, "BACKGROUND")
+        frame.icon:SetAllPoints()
 
-    -- Create the cooldown spiral
-    frame.cooldown = CreateFrame("Cooldown", nil, frame, "CooldownFrameTemplate")
-    frame.cooldown:SetAllPoints()
-    frame.cooldown:SetDrawEdge(true)
-    frame.cooldown:SetDrawSwipe(true)
-    frame.cooldown:SetSwipeColor(0, 0, 0, 0.75)
+        -- Create the cooldown spiral and make it cover the category frame
+        frame.cooldown = CreateFrame("Cooldown", nil, frame, "CooldownFrameTemplate")
+        frame.cooldown:SetAllPoints()
+    end
 
-    -- Store reference
-    self.frames = self.frames or {}
-    self.frames[nameplateFrame] = frame
+    self:StyleFrames()
 end
 
 
 
 function NP:StyleFrames()
+    for nameplateUnit, _ in pairs(self.unitContainers) do
+        local container = self.unitContainers[nameplateUnit]
 
+        for drCategory, _ in pairs(drCategories) do
+            local frame = self.categoryFrames[nameplateUnit][drCategory]
+
+            frame:SetSize(24, 24)
+
+            frame.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+
+            frame.cooldown:SetDrawEdge(true)
+            frame.cooldown:SetDrawSwipe(true)
+            frame.cooldown:SetSwipeColor(0, 0, 0, 0.75)
+        end
+    end
+end
+
+
+function NP:UpdateFrames()
+    print("UpdateFrames")
 end
 
 

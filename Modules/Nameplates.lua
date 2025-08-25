@@ -20,6 +20,7 @@ function NP:OnEnable()
     self.unitContainers = self.unitContainers or {}
     self.categoryFrames = self.categoryFrames or {}
     self.trackedUnits = self.trackedUnits or {}
+    self.visibleNameplates = self.visibleNameplates or {}
 end
 
 
@@ -92,6 +93,10 @@ function NP:SetupDB()
             frameSize = 30,
             growIcons = "RIGHT",
             iconsSpacing = 5,
+            point = "BOTTOM",
+            relativePoint = "TOP",
+            offsetX = 0,
+            offsetY = 0,
 
             -- Cooldown settings
             cooldown = true,
@@ -110,17 +115,15 @@ function NP:NAME_PLATE_UNIT_ADDED(_, nameplateUnit)
 
     if not unitGUID or not nameplateFrame then return end
 
+    self.visibleNameplates[nameplateFrame] = self.visibleNameplates[nameplateFrame] or {}
+    self.visibleNameplates[nameplateFrame].unitGUID = unitGUID
+
     -- Create DR frames for nameplates if they don't exist yet
-    if not self.unitContainers[nameplateUnit] then
-        self:CreateFrames(nameplateUnit, nameplateFrame)
-        self.unitContainers[nameplateUnit].unitGUID = unitGUID
+    if not self.unitContainers[nameplateFrame] then
+        self:CreateFrames(nameplateFrame)
     end
 
-    -- Refresh DR frames for nameplates if they are reused
-    if self.unitContainers[nameplateUnit].unitGUID ~= unitGUID then
-        self:UpdateFrames()
-        self.unitContainers[nameplateUnit].unitGUID = unitGUID
-    end
+    self.unitContainers[nameplateFrame]:Show()
 end
 
 
@@ -128,8 +131,11 @@ function NP:NAME_PLATE_UNIT_REMOVED(_, nameplateUnit)
     local unitGUID = UnitGUID(nameplateUnit)
     local nameplateFrame = C_NamePlate.GetNamePlateForUnit(nameplateUnit)
 
-    if not nameplateFrame then return end
+    if not unitGUID or not nameplateFrame then return end
 
+    self.visibleNameplates[nameplateFrame] = nil
+
+    self.unitContainers[nameplateFrame]:Hide()
 end
 
 
@@ -242,10 +248,11 @@ function NP:COMBAT_LOG_EVENT_UNFILTERED()
 end
 
 
-function NP:CreateFrames(nameplateUnit, nameplateFrame)
+function NP:CreateFrames(nameplateFrame)
+    local nameplateName = nameplateFrame:GetName()
     -- Create the container frame and store the reference
-    local container = CreateFrame("Frame", "NPContainer." .. nameplateUnit, nameplateFrame)
-    self.unitContainers[nameplateUnit] = container
+    local container = CreateFrame("Frame", "NPContainer." .. nameplateName)
+    self.unitContainers[nameplateFrame] = container
 
     -- Create the container texture, make it cover the container frame and make it appear under the text label
     container.texture = container:CreateTexture(nil, "OVERLAY")
@@ -259,9 +266,9 @@ function NP:CreateFrames(nameplateUnit, nameplateFrame)
 
     for drCategory, _ in pairs(drCategories) do
         -- Create the DR category frame, center it on the container frame and store the reference
-        local frame = CreateFrame("Frame", "NPFrame." .. nameplateUnit .. "." .. drCategory, container)
-        self.categoryFrames[nameplateUnit] = self.categoryFrames[nameplateUnit] or {}
-        self.categoryFrames[nameplateUnit][drCategory] = frame
+        local frame = CreateFrame("Frame", "NPFrame." .. nameplateName .. "." .. drCategory, container)
+        self.categoryFrames[nameplateFrame] = self.categoryFrames[nameplateFrame] or {}
+        self.categoryFrames[nameplateFrame][drCategory] = frame
 
         -- Create the icon texture and make it cover the category frame
         frame.icon = frame:CreateTexture(nil, "BACKGROUND")
@@ -280,18 +287,16 @@ end
 function NP:StyleFrames()
     local settings = self.db.profile
 
-    for nameplateUnit, _ in pairs(self.unitContainers) do
-        local nameplateFrame = C_NamePlate.GetNamePlateForUnit(nameplateUnit)
-        local container = self.unitContainers[nameplateUnit]
+    for nameplateFrame, container in pairs(self.unitContainers) do
 
         container:SetHeight(settings.frameSize)
         container:SetWidth(settings.frameSize)
-        container:SetPoint("BOTTOMLEFT", nameplateFrame, "BOTTOMLEFT", 0, 0)
+        container:SetPoint(settings.point, nameplateFrame, settings.relativePoint, settings.offsetX, settings.offsetY)
 
         container.texture:SetColorTexture(1,1,1,1)
 
         for drCategory, _ in pairs(drCategories) do
-            local frame = self.categoryFrames[nameplateUnit][drCategory]
+            local frame = self.categoryFrames[nameplateFrame][drCategory]
 
             frame:SetSize(settings.frameSize, settings.frameSize)
             if settings.cropIcons then
@@ -325,12 +330,12 @@ function NP:UpdateFrames()
         DOWN = {iconPoint = "TOP", anchorPoint = "BOTTOM"},
     }
 
-    for nameplateUnit in pairs(self.categoryFrames) do
-        local nameplateFrame = C_NamePlate.GetNamePlateForUnit(nameplateUnit)
+    for nameplateFrame, drCategory in pairs(self.categoryFrames) do
+        local container = self.unitContainers[nameplateFrame]
         local activeFrames = {}
         local enabledFrameCount = 0
 
-        for category, frame in pairs(self.categoryFrames[nameplateUnit]) do
+        for category, frame in pairs(drCategory) do
             frame.enabled = settings.drCategories[category].enabled
 
             if frame.enabled then
@@ -362,7 +367,7 @@ function NP:UpdateFrames()
             local spacing = settings.iconsSpacing
             frame:ClearAllPoints()
             if not lastFrame then
-                frame:SetPoint(iconPoint, self.unitContainers[nameplateUnit], iconPoint)
+                frame:SetPoint(iconPoint, container)
             else
                 frame:SetPoint(
                     iconPoint,
@@ -488,10 +493,8 @@ function NP:Test()
         for drCategory, _ in pairs(drCategories) do
             local spellID = GetRandomSpell(spellList, drCategory)
             for i = 1, 40 do
-                local unitToken = "nameplate" .. i
-                local unitGUID = UnitGUID(unitToken)
-
-                if unitGUID then
+                for nameplateFrames, nameplateData in pairs(self.visibleNameplates) do
+                    local unitGUID = nameplateData.unitGUID
                     NP.trackedUnits = NP.trackedUnits or {}
                     NP.trackedUnits[unitGUID] = NP.trackedUnits[unitGUID] or {}
                     NP.trackedUnits[unitGUID][drCategory] = NP.trackedUnits[unitGUID][drCategory] or {}

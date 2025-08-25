@@ -97,6 +97,7 @@ function NP:SetupDB()
             relativePoint = "TOP",
             offsetX = 0,
             offsetY = 0,
+            positionLocked = false,
 
             -- Cooldown settings
             cooldown = true,
@@ -124,18 +125,21 @@ function NP:NAME_PLATE_UNIT_ADDED(_, nameplateUnit)
     end
 
     self.unitContainers[nameplateFrame]:Show()
+
+    for drCategory, _ in pairs(drCategories) do
+        self:StartOrUpdateDRTimer(drCategory, unitGUID)
+    end
 end
 
 
 function NP:NAME_PLATE_UNIT_REMOVED(_, nameplateUnit)
-    local unitGUID = UnitGUID(nameplateUnit)
     local nameplateFrame = C_NamePlate.GetNamePlateForUnit(nameplateUnit)
 
-    if not unitGUID or not nameplateFrame then return end
+    if not nameplateFrame then return end
 
     self.visibleNameplates[nameplateFrame] = nil
 
-    self.unitContainers[nameplateFrame]:Hide()
+    self:ResetFrame(nameplateFrame)
 end
 
 
@@ -257,12 +261,10 @@ function NP:CreateFrames(nameplateFrame)
     -- Create the container texture, make it cover the container frame and make it appear under the text label
     container.texture = container:CreateTexture(nil, "OVERLAY")
     container.texture:SetAllPoints()
-    container.texture:SetDrawLayer("OVERLAY", 1)
 
     -- Create the container text label, center it on the container frame and make it appear above the text label
     container.text = container:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    container.text:SetPoint("CENTER", container, "CENTER", 0, 0)
-    container.text:SetDrawLayer("OVERLAY", 2)
+    container.text:SetAllPoints()
 
     for drCategory, _ in pairs(drCategories) do
         -- Create the DR category frame, center it on the container frame and store the reference
@@ -287,13 +289,29 @@ end
 function NP:StyleFrames()
     local settings = self.db.profile
 
+    local enabledFrameCount = 0
+    for _, drSettings in pairs(settings.drCategories) do
+        if drSettings.enabled then
+            enabledFrameCount = enabledFrameCount + 1
+        end
+    end
+
     for nameplateFrame, container in pairs(self.unitContainers) do
 
         container:SetHeight(settings.frameSize)
-        container:SetWidth(settings.frameSize)
+        container:SetWidth(enabledFrameCount * settings.frameSize + math.max(0, enabledFrameCount - 1) * settings.iconsSpacing)
         container:SetPoint(settings.point, nameplateFrame, settings.relativePoint, settings.offsetX, settings.offsetY)
 
-        container.texture:SetColorTexture(1,1,1,1)
+        if settings.positionLocked then
+            container.texture:SetColorTexture(0, 0, 0, 0)
+            container.text:SetText("")
+        else
+            container.texture:SetDrawLayer("OVERLAY", 1)
+            container.texture:SetColorTexture(0, 0, 0, 0.4)
+
+            container.text:SetDrawLayer("OVERLAY", 2)
+            container.text:SetText("DRT nameplate")
+        end
 
         for drCategory, _ in pairs(drCategories) do
             local frame = self.categoryFrames[nameplateFrame][drCategory]
@@ -383,9 +401,22 @@ function NP:UpdateFrames()
 end
 
 
+function NP:ResetFrame(nameplateFrame)
+    local container = self.unitContainers[nameplateFrame]
+    container:Hide()
+
+    local categoryFrames = self.categoryFrames[nameplateFrame]
+    for _, categoryFrame in pairs(categoryFrames) do
+        categoryFrame.icon:SetTexture(nil)
+        categoryFrame.cooldown:Clear()
+    end
+end
+
+
 function NP:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
---[[     self.trackedUnits[unitGUID] = self.trackedUnits[unitGUID] or {}
-    self.trackedUnits[unitGUID][drCategory] = self.trackedUnits[unitGUID][drCategory] or {} ]]
+    local tracked = self.trackedUnits[unitGUID]
+
+    if not tracked then return end
 
     local data = self.trackedUnits[unitGUID][drCategory]
 
@@ -393,14 +424,14 @@ function NP:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
         data.lastSpellID = spellID
     end
 
-    local nameplateUnit
-    for unit, unitData in pairs(self.unitContainers) do
-        if unitData.unitGUID == unitGUID then
-            nameplateUnit = unit
+    local nameplateFrame
+    for frame, frameData in pairs(self.visibleNameplates) do
+        if frameData.unitGUID == unitGUID then
+            nameplateFrame = frame
         end
     end
 
-    local frame = self.categoryFrames[nameplateUnit] and self.categoryFrames[nameplateUnit][drCategory]
+    local frame = self.categoryFrames[nameplateFrame] and self.categoryFrames[nameplateFrame][drCategory]
     local categoryIcon = self.db.profile.drCategories[drCategory].icon
 
     if frame then
@@ -520,7 +551,7 @@ function NP:Test()
         NP.testTimer = C_Timer.NewTimer(reset, function()
             count = count + 1
             if count == 3 then
-                -- NP.trackedUnits = {}
+                NP.trackedUnits = {}
                 count = 0
             end
             TestIcons()

@@ -88,6 +88,12 @@ function NP:SetupDB()
                 },
             },
 
+            -- General settings
+            excludeNPCs = false,
+            excludePets = true,
+            excludeGuardians = true,
+            excludeObjects = true,
+
             -- Icon settings
             cropIcons = true,
             frameSize = 30,
@@ -97,7 +103,7 @@ function NP:SetupDB()
             relativePoint = "TOP",
             offsetX = 0,
             offsetY = 0,
-            positionLocked = false,
+            positionLocked = true,
 
             -- Cooldown settings
             cooldown = true,
@@ -167,6 +173,15 @@ function NP:COMBAT_LOG_EVENT_UNFILTERED()
 
 
     local _, eventType, _, _, _, _, _, destGUID, _, destFlags, _, spellID, _, _, auraType = CombatLogGetCurrentEventInfo()
+
+    -- Return if affected unit is excluded from tracking
+    local settings = self.db.profile
+    local isPlayer = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_PLAYER) > 0
+    local isPet = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_PET) > 0
+    local isGuardian = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_GUARDIAN) > 0
+    local isObject = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_OBJECT) > 0
+
+    if settings.excludeNPCs and not isPlayer then return end
 
     -- Check all debuffs found in the combat log
     if auraType == "DEBUFF" then
@@ -434,7 +449,7 @@ function NP:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
     local frame = self.categoryFrames[nameplateFrame] and self.categoryFrames[nameplateFrame][drCategory]
     local categoryIcon = self.db.profile.drCategories[drCategory].icon
 
-    if frame then
+    if data and frame then
         local iconTexture
         if categoryIcon == "dynamic" then
             local spellInfo = C_Spell.GetSpellInfo(data.lastSpellID)

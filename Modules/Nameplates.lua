@@ -95,10 +95,13 @@ function NP:SetupDB()
             excludeObjects = true,
 
             -- Icon settings
+            coloredBorder = true,
+            drIndicator = true,
             cropIcons = true,
-            frameSize = 30,
             growIcons = "RIGHT",
             iconsSpacing = 5,
+            borderSize = 1,
+            frameSize = 30,
             point = "BOTTOM",
             relativePoint = "TOP",
             offsetX = 0,
@@ -108,9 +111,9 @@ function NP:SetupDB()
             -- Cooldown settings
             cooldown = true,
             cooldownReverse = true,
-            cooldownSwipeAlpha = 0.6,
             cooldownEdge = true,
             cooldownNumbersHide = false,
+            cooldownSwipeAlpha = 0.6,
         }
     })
 end
@@ -270,7 +273,7 @@ end
 function NP:CreateFrames(nameplateFrame)
     local nameplateName = nameplateFrame:GetName()
     -- Create the container frame and store the reference
-    local container = CreateFrame("Frame", "NPContainer." .. nameplateName)
+    local container = CreateFrame("Frame", "NPContainer." .. nameplateName, nameplateFrame)
     self.unitContainers[nameplateFrame] = container
 
     -- Create the container texture, make it cover the container frame and make it appear under the text label
@@ -294,6 +297,8 @@ function NP:CreateFrames(nameplateFrame)
         -- Create the cooldown spiral and make it cover the category frame
         frame.cooldown = CreateFrame("Cooldown", nil, frame, "CooldownFrameTemplate")
         frame.cooldown:SetAllPoints()
+
+        frame.border = CreateFrame("Frame", nil, frame, "BackdropTemplate")
     end
 
     self:StyleFrames()
@@ -344,6 +349,25 @@ function NP:StyleFrames()
             frame.cooldown:SetSwipeColor(0, 0, 0, settings.cooldownSwipeAlpha)
             frame.cooldown:SetDrawEdge(settings.cooldown and settings.cooldownEdge)
             frame.cooldown:SetHideCountdownNumbers(settings.cooldownNumbersHide)
+
+            frame.border:SetFrameStrata("TOOLTIP") -- maybe set for frame and add draw layer
+            frame.border:SetBackdrop({
+                edgeFile = "Interface\\Buttons\\WHITE8x8",
+                edgeSize = self.db.profile.borderSize,
+                insets = {
+                    left = 1,
+                    right = 1,
+                    top = 1,
+                    bottom = 1
+                }
+            })
+            frame.border:SetBackdropBorderColor(0, 1, 0)
+            frame.border:SetAllPoints()
+            if settings.coloredBorder then
+                frame.border:SetAlpha(1)
+            else
+                frame.border:SetAlpha(0)
+            end
         end
     end
 end
@@ -627,7 +651,7 @@ function NP:GetOptions()
                         DRT:DisableModule("NP")
                     end
                 end,
-                order = 100
+                order = 10
             },
             resetButton = {
                 type = "execute",
@@ -639,13 +663,250 @@ function NP:GetOptions()
                 disabled = function ()
                     return not self:IsEnabled()
                 end,
-                order = 200
+                order = 20
             },
             separator1 = {
                 type = "description",
                 name = "",
                 width = "full",
-                order = 300
+                order = 30
+            },
+            general = {
+                type = "group",
+                name = "General",
+                order = 40,
+                args = {
+                    widget = {
+                        type = "group",
+                        name = "Widget",
+                        desc = "Widget settings",
+                        inline = true,
+                        disabled = function ()
+                            return not self:IsEnabled()
+                        end,
+                        order = 10,
+                        args = {
+                            header1 = {
+                                type = "header",
+                                name = "Cooldown Options",
+                                width = "full",
+                                order = 10,
+                            },
+                            cooldown = {
+                                type = "toggle",
+                                name = "Cooldown Animation",
+                                desc = "",
+                                get = function()
+                                    return self.db.profile.cooldown
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.cooldown = value
+                                    self:StyleFrames()
+                                end,
+                                order = 20,
+                            },
+                            cooldownReverse = {
+                                type = "toggle",
+                                name = "Cooldown Reverse",
+                                desc = "",
+                                get = function()
+                                    return self.db.profile.cooldownReverse
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.cooldownReverse = value
+                                    self:StyleFrames()
+                                end,
+                                order = 30,
+                            },
+                            cooldownEdge = {
+                                type = "toggle",
+                                name = "Cooldown Edge",
+                                desc = "",
+                                get = function()
+                                    return self.db.profile.cooldownEdge
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.cooldownEdge = value
+                                    self:StyleFrames()
+                                end,
+                                order = 40,
+                            },
+                            cooldownNumbersHide = {
+                                type = "toggle",
+                                name = "Cooldown Numbers",
+                                desc = "",
+                                get = function()
+                                    return self.db.profile.cooldownNumbersHide
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.cooldownNumbersHide = value
+                                    self:StyleFrames()
+                                end,
+                                order = 50,
+                            },
+                            separator1 = {
+                                type = "description",
+                                name = "",
+                                width = "full",
+                                order = 60,
+                            },
+                            cooldownSwipeAlpha = {
+                                type = "range",
+                                name = "Cooldown Swipe Alpha",
+                                desc = "",
+                                min = 0,
+                                max = 1,
+                                step = 0.1,
+                                get = function()
+                                    return self.db.profile.cooldownSwipeAlpha
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.cooldownSwipeAlpha = value
+                                    self:StyleFrames()
+                                end,
+                                order = 70,
+                            },
+                            separator2 = {
+                                type = "description",
+                                name = "",
+                                width = "full",
+                                order = 80,
+                            },
+                            header2 = {
+                            type = "header",
+                            name = "Icon Options",
+                            width = "full",
+                            order = 90,
+                            },
+                            coloredBorder = {
+                                type = "toggle",
+                                name = "Colored Border",
+                                desc = "Show a colored border that indicates the DR level",
+                                get = function()
+                                    return self.db.profile.coloredBorder
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.coloredBorder = value
+                                    self:StyleFrames()
+                                end,
+                                order = 100,
+                            },
+                            drIndicator = {
+                                type = "toggle",
+                                name = "DR Indicator",
+                                desc = "Show an indicator for the DR level",
+                                get = function()
+                                    return self.db.profile.drIndicator
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.drIndicator = value
+                                    self:StyleFrames()
+                                end,
+                                order = 110,
+                            },
+                            cropIcons = {
+                                type = "toggle",
+                                name = "Crop Icons",
+                                desc = "",
+                                get = function()
+                                    return self.db.profile.cropIcons
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.cropIcons = value
+                                    self:StyleFrames()
+                                end,
+                                order = 120,
+                            },
+                            separator3 = {
+                                type = "description",
+                                name = "",
+                                width = "full",
+                                order = 130,
+                            },
+                            growIcons = {
+                                type = "select",
+                                name = "Grow Direction",
+                                desc = "Choose in which direction new icons will be shown",
+                                values = {
+                                    ["LEFT"] = "Left",
+                                    ["RIGHT"] = "Right",
+                                    ["UP"] = "Up",
+                                    ["DOWN"] = "Down"
+                                },
+                                get = function()
+                                    return self.db.profile.growIcons
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.growIcons = value
+                                    self:UpdateFrames()
+                                end,
+                                order = 140,
+                            },
+                            iconsSpacing = {
+                                type = "range",
+                                name = "Icon Spacing",
+                                desc = "Adjust the gap between the icons",
+                                min = 0,
+                                max = 200,
+                                step = 1,
+                                get = function ()
+                                    return self.db.profile.iconsSpacing
+                                end,
+                                set = function (_, value)
+                                    self.db.profile.iconsSpacing = value
+                                    self:UpdateFrames()
+                                end,
+                                order = 150,
+                            },
+                            separator4 = {
+                                type = "description",
+                                name = "",
+                                width = "full",
+                                order = 160,
+                            },
+                            borderSize = {
+                                type = "range",
+                                name = "Colored Border Size",
+                                desc = "",
+                                min = 1,
+                                max = 20,
+                                step = 1,
+                                get = function ()
+                                    return self.db.profile.borderSize
+                                end,
+                                set = function (_, value)
+                                    self.db.profile.borderSize = value
+                                    self:StyleFrames()
+                                end,
+                                order = 170,
+                            },
+                            frameSize = {
+                                type = "range",
+                                name = "Icons Frame Size",
+                                desc = "",
+                                min = 0,
+                                max = 200,
+                                step = 1,
+                                get = function ()
+                                    return self.db.profile.frameSize
+                                end,
+                                set = function (_, value)
+                                    self.db.profile.frameSize = value
+                                    self:StyleFrames()
+                                end,
+                                order = 180,
+                            },
+                        },
+                    },
+                }
+            },
+            diminishingReturns = {
+                type = "group",
+                name = "DRs",
+                order = 50,
+                args = {
+
+                }
             },
         }
     }

@@ -272,32 +272,31 @@ end
 
 function NP:CreateFrames(nameplateFrame)
     local nameplateName = nameplateFrame:GetName()
+
     -- Create the container frame and store the reference
     local container = CreateFrame("Frame", "NPContainer." .. nameplateName, nameplateFrame)
     self.unitContainers[nameplateFrame] = container
 
-    -- Create the container texture, make it cover the container frame and make it appear under the text label
+    -- Create the container texture
     container.texture = container:CreateTexture(nil, "OVERLAY")
-    container.texture:SetAllPoints()
 
-    -- Create the container text label, center it on the container frame and make it appear above the text label
+    -- Create the container text label
     container.text = container:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    container.text:SetAllPoints()
 
     for drCategory, _ in pairs(drCategories) do
-        -- Create the DR category frame, center it on the container frame and store the reference
+
+        -- Create the DR category frame and store the reference
         local frame = CreateFrame("Frame", "NPFrame." .. nameplateName .. "." .. drCategory, container)
         self.categoryFrames[nameplateFrame] = self.categoryFrames[nameplateFrame] or {}
         self.categoryFrames[nameplateFrame][drCategory] = frame
 
-        -- Create the icon texture and make it cover the category frame
+        -- Create the icon texture
         frame.icon = frame:CreateTexture(nil, "BACKGROUND")
-        frame.icon:SetAllPoints()
 
-        -- Create the cooldown spiral and make it cover the category frame
+        -- Create the cooldown frame
         frame.cooldown = CreateFrame("Cooldown", nil, frame, "CooldownFrameTemplate")
-        frame.cooldown:SetAllPoints()
 
+        -- Create the border frame
         frame.border = CreateFrame("Frame", nil, frame, "BackdropTemplate")
     end
 
@@ -318,31 +317,54 @@ function NP:StyleFrames()
 
     for nameplateFrame, container in pairs(self.unitContainers) do
 
-        container:SetHeight(settings.frameSize)
-        container:SetWidth(enabledFrameCount * settings.frameSize + math.max(0, enabledFrameCount - 1) * settings.iconsSpacing)
+        -- Container styling
         container:SetPoint(settings.point, nameplateFrame, settings.relativePoint, settings.offsetX, settings.offsetY)
+        if settings.growIcons == "LEFT" or settings.growIcons == "RIGHT" then
+            container:SetHeight(settings.frameSize)
+            container:SetWidth(enabledFrameCount * settings.frameSize + math.max(0, enabledFrameCount - 1) * settings.iconsSpacing)
+        elseif settings.growIcons == "UP" or settings.growIcons == "DOWN" then
+            container:SetHeight(enabledFrameCount * settings.frameSize + math.max(0, enabledFrameCount - 1) * settings.iconsSpacing)
+            container:SetWidth(settings.frameSize)
+        end
 
+        -- Container texture styling
+        container.texture:SetAllPoints()
         if settings.positionLocked then
             container.texture:SetColorTexture(0, 0, 0, 0)
-            container.text:SetText("")
         else
             container.texture:SetDrawLayer("OVERLAY", 1)
             container.texture:SetColorTexture(0, 0, 0, 0.4)
+        end
 
+        -- Container text label styling
+        container.text:SetAllPoints()
+        if settings.positionLocked then
+            container.text:SetText("")
+        else
             container.text:SetDrawLayer("OVERLAY", 2)
-            container.text:SetText("DRT nameplate")
+            if settings.growIcons == "LEFT" or settings.growIcons == "RIGHT" then
+                container.text:SetText("DRT nameplate")
+            elseif settings.growIcons == "UP" or settings.growIcons == "DOWN" then
+                container.text:SetText("D\nR\nT\n\nn\na\nm\ne\np\nl\na\nt\ne")
+            end
         end
 
         for drCategory, _ in pairs(drCategories) do
             local frame = self.categoryFrames[nameplateFrame][drCategory]
 
+            -- DR category frame styling
             frame:SetSize(settings.frameSize, settings.frameSize)
+
+            -- Icon texture styling
+            frame.icon:SetAllPoints()
             if settings.cropIcons then
                 frame.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
             else
                 frame.icon:SetTexCoord(0, 1, 0, 1)
             end
 
+            -- Cooldown frame styling
+            frame.cooldown:SetAllPoints()
             frame.cooldown:SetDrawBling(false)
             frame.cooldown:SetDrawSwipe(settings.cooldown)
             frame.cooldown:SetReverse(settings.cooldownReverse)
@@ -350,6 +372,8 @@ function NP:StyleFrames()
             frame.cooldown:SetDrawEdge(settings.cooldown and settings.cooldownEdge)
             frame.cooldown:SetHideCountdownNumbers(settings.cooldownNumbersHide)
 
+            -- Border frame styling
+            frame.border:SetAllPoints()
             frame.border:SetFrameStrata("TOOLTIP") -- maybe set for frame and add draw layer
             frame.border:SetBackdrop({
                 edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -362,7 +386,6 @@ function NP:StyleFrames()
                 }
             })
             frame.border:SetBackdropBorderColor(0, 1, 0)
-            frame.border:SetAllPoints()
             if settings.coloredBorder then
                 frame.border:SetAlpha(1)
             else
@@ -838,6 +861,7 @@ function NP:GetOptions()
                                 end,
                                 set = function(_, value)
                                     self.db.profile.growIcons = value
+                                    self:StyleFrames()
                                     self:UpdateFrames()
                                 end,
                                 order = 140,
@@ -854,6 +878,7 @@ function NP:GetOptions()
                                 end,
                                 set = function (_, value)
                                     self.db.profile.iconsSpacing = value
+                                    self:StyleFrames()
                                     self:UpdateFrames()
                                 end,
                                 order = 150,

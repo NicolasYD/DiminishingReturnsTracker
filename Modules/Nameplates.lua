@@ -318,6 +318,7 @@ function NP:StyleFrames()
     for nameplateFrame, container in pairs(self.unitContainers) do
 
         -- Container styling
+        container:ClearAllPoints()
         container:SetPoint(settings.point, nameplateFrame, settings.relativePoint, settings.offsetX, settings.offsetY)
         if settings.growIcons == "LEFT" or settings.growIcons == "RIGHT" then
             container:SetHeight(settings.frameSize)
@@ -646,6 +647,8 @@ end
 
 function NP:ResetModule()
     self.db:ResetProfile()
+    self:StyleFrames()
+    self:UpdateFrames()
 end
 
 
@@ -923,6 +926,123 @@ function NP:GetOptions()
                             },
                         },
                     },
+                    position = {
+                        type = "group",
+                        name = "Position",
+                        desc = "Position settings",
+                        inline = true,
+                        disabled = function ()
+                            return not self:IsEnabled()
+                        end,
+                        order = 20,
+                        args = {
+                            lockPosition = {
+                                type = "toggle",
+                                name = "Lock Position",
+                                desc = "If unlocked, icons can be moved by mouse.",
+                                get = function()
+                                    return self.db.profile.positionLocked
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.positionLocked = value
+                                    self:StyleFrames()
+                                end,
+                                order = 10,
+                            },
+                            separator1 = {
+                                type = "description",
+                                name = "",
+                                width = "full",
+                                order = 20,
+                            },
+                            point = {
+                                type = "select",
+                                name = "Anchor Frame Point",
+                                desc = "Which point of the anchor frame to anchor to.",
+                                values = {
+                                    ["TOP"] = "TOP",
+                                    ["TOPLEFT"] = "TOPLEFT",
+                                    ["TOPRIGHT"] = "TOPRIGHT",
+                                    ["LEFT"] = "LEFT",
+                                    ["CENTER"] = "CENTER",
+                                    ["RIGHT"] = "RIGHT",
+                                    ["BOTTOM"] = "BOTTOM",
+                                    ["BOTTOMLEFT"] = "BOTTOMLEFT",
+                                    ["BOTTOMRIGHT"] = "BOTTOMRIGHT",
+                                },
+                                get = function()
+                                    return self.db.profile.point
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.point = value
+                                    self:StyleFrames()
+                                end,
+                                order = 30,
+                            },
+                            relativePoint = {
+                                type = "select",
+                                name = "Icon Frame Point",
+                                desc = "Which point of the icon frame to anchor to.",
+                                values = {
+                                    ["TOP"] = "TOP",
+                                    ["TOPLEFT"] = "TOPLEFT",
+                                    ["TOPRIGHT"] = "TOPRIGHT",
+                                    ["LEFT"] = "LEFT",
+                                    ["CENTER"] = "CENTER",
+                                    ["RIGHT"] = "RIGHT",
+                                    ["BOTTOM"] = "BOTTOM",
+                                    ["BOTTOMLEFT"] = "BOTTOMLEFT",
+                                    ["BOTTOMRIGHT"] = "BOTTOMRIGHT",
+                                },
+                                get = function()
+                                    return self.db.profile.relativePoint
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.relativePoint = value
+                                    self:StyleFrames()
+                                end,
+                                order = 40,
+                            },
+                            separator3 = {
+                                type = "description",
+                                name = "",
+                                width = "full",
+                                order = 50,
+                            },
+                            offsetX = {
+                                type = "range",
+                                name = "Icon Frame Offset X",
+                                desc = "",
+                                min = -500,
+                                max = 500,
+                                step = 1,
+                                get = function ()
+                                    return self.db.profile.offsetX
+                                end,
+                                set = function (_, value)
+                                    self.db.profile.offsetX = value
+                                    self:StyleFrames()
+                                end,
+                                order = 60,
+                            },
+                            offsetY = {
+                                type = "range",
+                                name = "Icon Frame Offset Y",
+                                desc = "",
+                                min = -500,
+                                max = 500,
+                                step = 1,
+                                get = function ()
+                                    return self.db.profile.offsetY
+                                end,
+                                set = function (_, value)
+                                    self.db.profile.offsetY = value
+                                    self:StyleFrames()
+                                end,
+                                order = 70,
+                            },
+                        }
+                    }
                 }
             },
             diminishingReturns = {

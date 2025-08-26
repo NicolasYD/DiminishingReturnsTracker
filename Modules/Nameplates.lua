@@ -102,7 +102,7 @@ function NP:SetupDB()
             iconsSpacing = 5,
             borderSize = 1,
             frameSize = 30,
-            point = "BOTTOM",
+            point = "CENTER",
             relativePoint = "TOP",
             offsetX = 0,
             offsetY = 0,
@@ -1013,8 +1013,8 @@ function NP:GetOptions()
                                 type = "range",
                                 name = "Icon Frame Offset X",
                                 desc = "",
-                                min = -500,
-                                max = 500,
+                                min = -100,
+                                max = 100,
                                 step = 1,
                                 get = function ()
                                     return self.db.profile.offsetX
@@ -1029,8 +1029,8 @@ function NP:GetOptions()
                                 type = "range",
                                 name = "Icon Frame Offset Y",
                                 desc = "",
-                                min = -500,
-                                max = 500,
+                                min = -100,
+                                max = 100,
                                 step = 1,
                                 get = function ()
                                     return self.db.profile.offsetY
@@ -1050,7 +1050,71 @@ function NP:GetOptions()
                 name = "DRs",
                 order = 50,
                 args = {
-
+                    trackedUnits = {
+                        type = "group",
+                        name = "Tracked Units",
+                        inline = true,
+                        disabled = function ()
+                            return not self:IsEnabled()
+                        end,
+                        order = 10,
+                        args = {
+                            header1 = {
+                                type = "header",
+                                name = "Excluded Units",
+                                width = "full",
+                                order = 10,
+                            },
+                            excludeNPCs = {
+                                type = "toggle",
+                                name = "Exclude NPCs",
+                                desc = "",
+                                get = function()
+                                    return self.db.profile.excludeNPCs
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.excludeNPCs = value
+                                end,
+                                order = 20,
+                            },
+                            excludePets = {
+                                type = "toggle",
+                                name = "Exclude Pets",
+                                desc = "",
+                                get = function()
+                                    return self.db.profile.excludePets
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.excludePets = value
+                                end,
+                                order = 30,
+                            },
+                            excludeGuardians = {
+                                type = "toggle",
+                                name = "Exclude Guardians",
+                                desc = "",
+                                get = function()
+                                    return self.db.profile.excludeGuardians
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.excludeGuardians = value
+                                end,
+                                order = 40,
+                            },
+                            excludeObjects = {
+                                type = "toggle",
+                                name = "Exclude Objects",
+                                desc = "",
+                                get = function()
+                                    return self.db.profile.excludeObjects
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.excludeObjects = value
+                                end,
+                                order = 50,
+                            },
+                        }
+                    },
                 }
             },
         }

@@ -100,7 +100,7 @@ function NP:SetupDB()
             cropIcons = true,
             growIcons = "RIGHT",
             iconsSpacing = 5,
-            borderSize = 1,
+            borderSize = 2,
             frameSize = 30,
             point = "CENTER",
             relativePoint = "TOP",
@@ -133,7 +133,7 @@ function NP:NAME_PLATE_UNIT_ADDED(_, nameplateUnit)
         self:CreateFrames(nameplateFrame)
     end
 
-    self.unitContainers[nameplateFrame]:Show()
+    self.unitContainers[nameplateFrame]:SetAlpha(1)
 
     for drCategory, _ in pairs(drCategories) do
         self:StartOrUpdateDRTimer(drCategory, unitGUID)
@@ -273,6 +273,17 @@ end
 function NP:CreateFrames(nameplateFrame)
     local nameplateName = nameplateFrame:GetName()
 
+    local function CreateBorderTextures(parent)
+        local border = {}
+
+        border.left = parent:CreateTexture(nil, "OVERLAY")
+        border.right = parent:CreateTexture(nil, "OVERLAY")
+        border.top = parent:CreateTexture(nil, "OVERLAY")
+        border.bottom = parent:CreateTexture(nil, "OVERLAY")
+
+        return border
+    end
+
     -- Create the container frame and store the reference
     local container = CreateFrame("Frame", "NPContainer." .. nameplateName, nameplateFrame)
     self.unitContainers[nameplateFrame] = container
@@ -296,8 +307,22 @@ function NP:CreateFrames(nameplateFrame)
         -- Create the cooldown frame
         frame.cooldown = CreateFrame("Cooldown", nil, frame, "CooldownFrameTemplate")
 
-        -- Create the border frame
-        frame.border = CreateFrame("Frame", nil, frame, "BackdropTemplate")
+        -- Create the border frame and textures
+        frame.border = CreateFrame("Frame", nil, frame)
+        frame.borderTextures = CreateBorderTextures(frame.border)
+
+        -- Create the DR indicator frame
+        frame.drIndicator = CreateFrame("Frame", nil, frame)
+
+        -- Create the DR indicator texture
+        frame.drIndicator.texture = frame.drIndicator:CreateTexture(nil, "OVERLAY")
+
+        -- Create the DR indicator text label
+        frame.drIndicator.text = frame.drIndicator:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+
+        -- Create the DR indicator border frame and textures
+        frame.drIndicator.border = CreateFrame("Frame", nil, frame.drIndicator)
+        frame.drIndicator.borderTextures = CreateBorderTextures(frame.drIndicator.border)
     end
 
     self:StyleFrames()
@@ -329,6 +354,7 @@ function NP:StyleFrames()
         end
 
         -- Container texture styling
+        container.texture:ClearAllPoints()
         container.texture:SetAllPoints()
         if settings.positionLocked then
             container.texture:SetColorTexture(0, 0, 0, 0)
@@ -338,6 +364,7 @@ function NP:StyleFrames()
         end
 
         -- Container text label styling
+        container.text:ClearAllPoints()
         container.text:SetAllPoints()
         if settings.positionLocked then
             container.text:SetText("")
@@ -357,6 +384,7 @@ function NP:StyleFrames()
             frame:SetSize(settings.frameSize, settings.frameSize)
 
             -- Icon texture styling
+            frame.icon:ClearAllPoints()
             frame.icon:SetAllPoints()
             if settings.cropIcons then
                 frame.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
@@ -365,6 +393,7 @@ function NP:StyleFrames()
             end
 
             -- Cooldown frame styling
+            frame.cooldown:ClearAllPoints()
             frame.cooldown:SetAllPoints()
             frame.cooldown:SetDrawBling(false)
             frame.cooldown:SetDrawSwipe(settings.cooldown)
@@ -374,23 +403,103 @@ function NP:StyleFrames()
             frame.cooldown:SetHideCountdownNumbers(settings.cooldownNumbersHide)
 
             -- Border frame styling
+            frame.border:ClearAllPoints()
             frame.border:SetAllPoints()
-            frame.border:SetFrameStrata("TOOLTIP") -- maybe set for frame and add draw layer
-            frame.border:SetBackdrop({
-                edgeFile = "Interface\\Buttons\\WHITE8x8",
-                edgeSize = self.db.profile.borderSize,
-                insets = {
-                    left = 1,
-                    right = 1,
-                    top = 1,
-                    bottom = 1
-                }
-            })
-            frame.border:SetBackdropBorderColor(0, 1, 0)
+            frame.border:SetFrameLevel(frame.cooldown:GetFrameLevel() + 1)
             if settings.coloredBorder then
                 frame.border:SetAlpha(1)
             else
                 frame.border:SetAlpha(0)
+            end
+
+            for position, texture in pairs(frame.borderTextures) do
+                local size = settings.borderSize
+
+                if position == "left" then
+                    texture:ClearAllPoints()
+                    texture:SetPoint("TOPLEFT", -size, size)
+                    texture:SetPoint("BOTTOMLEFT", -size, -size)
+                    texture:SetWidth(size)
+
+                elseif position == "right" then
+                    texture:ClearAllPoints()
+                    texture:SetPoint("TOPRIGHT", size, size)
+                    texture:SetPoint("BOTTOMRIGHT", size, -size)
+                    texture:SetWidth(size)
+
+                elseif position == "top" then
+                    texture:ClearAllPoints()
+                    texture:SetPoint("TOPLEFT", -size, size)
+                    texture:SetPoint("TOPRIGHT", size, size)
+                    texture:SetHeight(size)
+
+                elseif position == "bottom" then
+                    texture:ClearAllPoints()
+                    texture:SetPoint("BOTTOMLEFT", -size, -size)
+                    texture:SetPoint("BOTTOMRIGHT", size, -size)
+                    texture:SetHeight(size)
+                end
+            end
+
+            -- DR indicator frame styling
+            frame.drIndicator:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+            frame.drIndicator:SetSize(0.3 * settings.frameSize, 0.3 * settings.frameSize)
+            if settings.drIndicator then
+                frame.drIndicator:SetAlpha(1)
+            else
+                frame.drIndicator:SetAlpha(0)
+            end
+
+            -- DR indicator texture styling
+            frame.drIndicator.texture:SetAllPoints()
+            frame.drIndicator.texture:SetDrawLayer("OVERLAY", 1)
+            frame.drIndicator.texture:SetColorTexture(0, 0, 0, 1)
+
+            -- DR indicator text label styling
+            local fontSize = 0.3 * settings.frameSize
+            local fontPath, _, fontFlags = frame.drIndicator.text:GetFont()
+
+            frame.drIndicator.text:SetPoint("CENTER", frame.drIndicator, "CENTER", 0, 0)
+            frame.drIndicator.text:SetDrawLayer("OVERLAY", 2)
+            frame.drIndicator.text:SetFont(fontPath, fontSize, fontFlags)
+
+            -- DR indicator border frame styling
+            frame.drIndicator.border:ClearAllPoints()
+            frame.drIndicator.border:SetAllPoints()
+            frame.drIndicator.border:SetFrameLevel(frame.drIndicator:GetFrameLevel() + 1)
+            if settings.coloredBorder then
+                frame.drIndicator.border:SetAlpha(1)
+            else
+                frame.drIndicator.border:SetAlpha(0)
+            end
+
+            for position, texture in pairs(frame.drIndicator.borderTextures) do
+                local size = settings.borderSize
+
+                if position == "left" then
+                    texture:ClearAllPoints()
+                    texture:SetPoint("TOPLEFT", -size, size)
+                    texture:SetPoint("BOTTOMLEFT", -size, -size)
+                    texture:SetWidth(size)
+
+                elseif position == "right" then
+                    texture:ClearAllPoints()
+                    texture:SetPoint("TOPRIGHT", size, size)
+                    texture:SetPoint("BOTTOMRIGHT", size, -size)
+                    texture:SetWidth(size)
+
+                elseif position == "top" then
+                    texture:ClearAllPoints()
+                    texture:SetPoint("TOPLEFT", -size, size)
+                    texture:SetPoint("TOPRIGHT", size, size)
+                    texture:SetHeight(size)
+
+                elseif position == "bottom" then
+                    texture:ClearAllPoints()
+                    texture:SetPoint("BOTTOMLEFT", -size, -size)
+                    texture:SetPoint("BOTTOMRIGHT", size, -size)
+                    texture:SetHeight(size)
+                end
             end
         end
     end
@@ -466,10 +575,11 @@ end
 
 function NP:ResetFrame(nameplateFrame)
     local container = self.unitContainers[nameplateFrame]
-    container:Hide()
+    container:SetAlpha(0)
 
     local categoryFrames = self.categoryFrames[nameplateFrame]
     for _, categoryFrame in pairs(categoryFrames) do
+        categoryFrame:SetAlpha(0)
         categoryFrame.icon:SetTexture(nil)
         categoryFrame.cooldown:Clear()
     end
@@ -525,19 +635,19 @@ function NP:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
             [0] = {1, 0, 0, 1},
         }
 
-        local text = diminishedText[data.diminished] or ""
-        local color = diminishedColor[data.diminished] or {1,1,1,1}
+        local text = diminishedText[data.diminished]
+        local color = diminishedColor[data.diminished]
 
---[[         frame.drIndicator.text:SetText(text)
-        frame.drIndicator.text:SetTextColor(unpack(color))
-
-        for _, tex in pairs(frame.borderTextures) do
-            tex:SetColorTexture(unpack(color))
+        for _, texture in pairs(frame.borderTextures) do
+            texture:SetColorTexture(unpack(color))
         end
 
-        for _, tex in pairs(frame.drIndicator.borderTextures) do
-            tex:SetColorTexture(unpack(color))
-        end ]]
+        frame.drIndicator.text:SetText(text)
+        frame.drIndicator.text:SetTextColor(unpack(color))
+
+        for _, texture in pairs(frame.drIndicator.borderTextures) do
+            texture:SetColorTexture(unpack(color))
+        end
 
         frame:SetScript("OnUpdate", function(f, elapsed)
             local currentTime = GetTime()
@@ -586,28 +696,26 @@ function NP:Test()
 
         for drCategory, _ in pairs(drCategories) do
             local spellID = GetRandomSpell(spellList, drCategory)
-            for i = 1, 40 do
-                for nameplateFrames, nameplateData in pairs(self.visibleNameplates) do
-                    local unitGUID = nameplateData.unitGUID
-                    NP.trackedUnits = NP.trackedUnits or {}
-                    NP.trackedUnits[unitGUID] = NP.trackedUnits[unitGUID] or {}
-                    NP.trackedUnits[unitGUID][drCategory] = NP.trackedUnits[unitGUID][drCategory] or {}
+            for nameplateFrames, nameplateData in pairs(self.visibleNameplates) do
+                local unitGUID = nameplateData.unitGUID
+                NP.trackedUnits = NP.trackedUnits or {}
+                NP.trackedUnits[unitGUID] = NP.trackedUnits[unitGUID] or {}
+                NP.trackedUnits[unitGUID][drCategory] = NP.trackedUnits[unitGUID][drCategory] or {}
 
-                    local currentTime = GetTime()
-                    local data = NP.trackedUnits[unitGUID][drCategory]
-                    data.startTime = currentTime
-                    data.resetTime = DRList:GetResetTime(drCategory)
-                    data.expirationTime = data.startTime + data.resetTime
+                local currentTime = GetTime()
+                local data = NP.trackedUnits[unitGUID][drCategory]
+                data.startTime = currentTime
+                data.resetTime = DRList:GetResetTime(drCategory)
+                data.expirationTime = data.startTime + data.resetTime
 
-                    if data.diminished == nil or currentTime >= (data.expirationTime or 0) then -- is nil or DR expired
-                        local duration = 1
-                        data.diminished = DRList:NextDR(duration, drCategory)
-                    else
-                        data.diminished = DRList:NextDR(data.diminished, drCategory)
-                    end
-
-                    self:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
+                if data.diminished == nil or currentTime >= (data.expirationTime or 0) then -- is nil or DR expired
+                    local duration = 1
+                    data.diminished = DRList:NextDR(duration, drCategory)
+                else
+                    data.diminished = DRList:NextDR(data.diminished, drCategory)
                 end
+
+                self:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
             end
         end
 

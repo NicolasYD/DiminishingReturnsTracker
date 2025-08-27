@@ -185,6 +185,9 @@ function NP:COMBAT_LOG_EVENT_UNFILTERED()
     local isObject = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_OBJECT) > 0
 
     if settings.excludeNPCs and not isPlayer then return end
+    if settings.excludePets and isPet then return end
+    if settings.excludeGuardians and isGuardian then return end
+    if settings.excludeObjects and isObject then return end
 
     -- Check all debuffs found in the combat log
     if auraType == "DEBUFF" then

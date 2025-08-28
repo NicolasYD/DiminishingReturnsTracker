@@ -89,6 +89,8 @@ function NP:SetupDB()
             },
 
             -- General settings
+            excludeFriendly = true,
+            excludeHostile = false,
             excludeNPCs = false,
             excludePets = true,
             excludeGuardians = true,
@@ -100,10 +102,10 @@ function NP:SetupDB()
             cropIcons = true,
             growIcons = "RIGHT",
             iconsSpacing = 5,
-            borderSize = 2,
+            borderSize = 1,
             frameSize = 30,
             point = "CENTER",
-            relativePoint = "TOP",
+            relativePoint = "BOTTOM",
             offsetX = 0,
             offsetY = 0,
             positionLocked = true,
@@ -179,12 +181,16 @@ function NP:COMBAT_LOG_EVENT_UNFILTERED()
 
     -- Return if affected unit is excluded from tracking
     local settings = self.db.profile
-    local isPlayer = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_PLAYER) > 0
+    local isFriendly = bit.band(destFlags, COMBATLOG_OBJECT_REACTION_FRIENDLY) > 0
+    local isHostile  = bit.band(destFlags, COMBATLOG_OBJECT_REACTION_HOSTILE) > 0
+    local isNPC = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_NPC) > 0
     local isPet = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_PET) > 0
     local isGuardian = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_GUARDIAN) > 0
     local isObject = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_OBJECT) > 0
 
-    if settings.excludeNPCs and not isPlayer then return end
+    if settings.excludeFriendly and isFriendly then return end
+    if settings.excludeHostile and isHostile then return end
+    if settings.excludeNPCs and isNPC then return end
     if settings.excludePets and isPet then return end
     if settings.excludeGuardians and isGuardian then return end
     if settings.excludeObjects and isObject then return end
@@ -1176,6 +1182,30 @@ function NP:GetOptions()
                                 width = "full",
                                 order = 10,
                             },
+                            excludeFriendly = {
+                                type = "toggle",
+                                name = "Exclude Friendly",
+                                desc = "",
+                                get = function()
+                                    return self.db.profile.excludeFriendly
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.excludeFriendly = value
+                                end,
+                                order = 20,
+                            },
+                            excludeHostile = {
+                                type = "toggle",
+                                name = "Exclude Hostile",
+                                desc = "",
+                                get = function()
+                                    return self.db.profile.excludeHostile
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.excludeHostile = value
+                                end,
+                                order = 30,
+                            },
                             excludeNPCs = {
                                 type = "toggle",
                                 name = "Exclude NPCs",
@@ -1186,7 +1216,7 @@ function NP:GetOptions()
                                 set = function(_, value)
                                     self.db.profile.excludeNPCs = value
                                 end,
-                                order = 20,
+                                order = 40,
                             },
                             excludePets = {
                                 type = "toggle",
@@ -1198,7 +1228,7 @@ function NP:GetOptions()
                                 set = function(_, value)
                                     self.db.profile.excludePets = value
                                 end,
-                                order = 30,
+                                order = 50,
                             },
                             excludeGuardians = {
                                 type = "toggle",
@@ -1210,7 +1240,7 @@ function NP:GetOptions()
                                 set = function(_, value)
                                     self.db.profile.excludeGuardians = value
                                 end,
-                                order = 40,
+                                order = 60,
                             },
                             excludeObjects = {
                                 type = "toggle",
@@ -1222,7 +1252,7 @@ function NP:GetOptions()
                                 set = function(_, value)
                                     self.db.profile.excludeObjects = value
                                 end,
-                                order = 50,
+                                order = 70,
                             },
                         }
                     },

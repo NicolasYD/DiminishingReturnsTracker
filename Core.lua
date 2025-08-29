@@ -84,7 +84,7 @@ function DRT:CheckVersion()
 
 		if changelog then
 			-- Inject text dynamically
-			StaticPopupDialogs["DRT_CHANGELOG"].text = "Diminishing Returns Tracker (DRT)" .. "\n\n" .. "|cff00ff00" .. "New Version " .. currentVersion .. "|r" .. "\n\n" .. changelog
+			StaticPopupDialogs["DRT_CHANGELOG"].text = "Diminishing Returns Tracker (DRT)" .. "\n\n" .. "|cffff00ff" .. "Type /drt for options!" .. "|r" .. "\n\n" .. "|cff00ff00" .. "New Version " .. currentVersion .. "|r" .. "\n" .. changelog
 			StaticPopup_Show("DRT_CHANGELOG")
 		end
 

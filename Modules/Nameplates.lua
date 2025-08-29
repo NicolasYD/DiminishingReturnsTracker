@@ -90,6 +90,7 @@ function NP:SetupDB()
 
             -- General settings
             excludeFriendly = true,
+            excludeNeutral = false,
             excludeHostile = false,
             excludeNPCs = false,
             excludePets = true,
@@ -103,7 +104,7 @@ function NP:SetupDB()
             growIcons = "RIGHT",
             iconsSpacing = 5,
             borderSize = 1,
-            frameSize = 30,
+            frameSize = 20,
             point = "CENTER",
             relativePoint = "BOTTOM",
             offsetX = 0,
@@ -180,15 +181,17 @@ function NP:COMBAT_LOG_EVENT_UNFILTERED()
     local _, eventType, _, _, _, _, _, destGUID, _, destFlags, _, spellID, _, _, auraType = CombatLogGetCurrentEventInfo()
 
     -- Return if affected unit is excluded from tracking
-    local settings = self.db.profile
     local isFriendly = bit.band(destFlags, COMBATLOG_OBJECT_REACTION_FRIENDLY) > 0
+    local isNeutral = bit.band(destFlags, COMBATLOG_OBJECT_REACTION_NEUTRAL) > 0
     local isHostile  = bit.band(destFlags, COMBATLOG_OBJECT_REACTION_HOSTILE) > 0
     local isNPC = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_NPC) > 0
     local isPet = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_PET) > 0
     local isGuardian = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_GUARDIAN) > 0
     local isObject = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_OBJECT) > 0
 
+    local settings = self.db.profile
     if settings.excludeFriendly and isFriendly then return end
+    if settings.excludeNeutral and isNeutral then return end
     if settings.excludeHostile and isHostile then return end
     if settings.excludeNPCs and isNPC then return end
     if settings.excludePets and isPet then return end
@@ -1194,6 +1197,18 @@ function NP:GetOptions()
                                 end,
                                 order = 20,
                             },
+                            excludeNeutral = {
+                                type = "toggle",
+                                name = "Exclude Neutral",
+                                desc = "",
+                                get = function()
+                                    return self.db.profile.excludeNeutral
+                                end,
+                                set = function(_, value)
+                                    self.db.profile.excludeNeutral = value
+                                end,
+                                order = 30,
+                            },
                             excludeHostile = {
                                 type = "toggle",
                                 name = "Exclude Hostile",
@@ -1204,7 +1219,7 @@ function NP:GetOptions()
                                 set = function(_, value)
                                     self.db.profile.excludeHostile = value
                                 end,
-                                order = 30,
+                                order = 40,
                             },
                             excludeNPCs = {
                                 type = "toggle",
@@ -1216,7 +1231,7 @@ function NP:GetOptions()
                                 set = function(_, value)
                                     self.db.profile.excludeNPCs = value
                                 end,
-                                order = 40,
+                                order = 50,
                             },
                             excludePets = {
                                 type = "toggle",
@@ -1228,7 +1243,7 @@ function NP:GetOptions()
                                 set = function(_, value)
                                     self.db.profile.excludePets = value
                                 end,
-                                order = 50,
+                                order = 60,
                             },
                             excludeGuardians = {
                                 type = "toggle",
@@ -1240,7 +1255,7 @@ function NP:GetOptions()
                                 set = function(_, value)
                                     self.db.profile.excludeGuardians = value
                                 end,
-                                order = 60,
+                                order = 70,
                             },
                             excludeObjects = {
                                 type = "toggle",
@@ -1252,14 +1267,158 @@ function NP:GetOptions()
                                 set = function(_, value)
                                     self.db.profile.excludeObjects = value
                                 end,
-                                order = 70,
+                                order = 80,
                             },
                         }
+                    },
+                    drOptions = {
+                        type = "group",
+                        name = "DR Options",
+                        inline = true,
+                        disabled = function ()
+                            return not self:IsEnabled()
+                        end,
+                        order = 20,
+                        args = {}
                     },
                 }
             },
         }
     }
+
+
+    function BuildDiminishingReturnsOptions()
+        local diminishingReturnsOptions = {
+            separator1 = {
+                type = "description",
+                name = "",
+                width = "full",
+                order = 10,
+            },
+            header1 = {
+                type = "header",
+                name = "Tracked DR Categories",
+                order = 20,
+            },
+            separator2 = {
+                type = "description",
+                name = "",
+                width = "full",
+                order = 30,
+            },
+            header2 = {
+                type = "header",
+                name = "DR Category Icons",
+                order = 40,
+            },
+            separator3 = {
+                type = "description",
+                name = "",
+                width = "full",
+                order = 50,
+            },
+            header3 = {
+                type = "header",
+                name = "DR Category Priorities",
+                order = 60,
+            },
+        }
+
+        local count = 0
+        for _ in pairs(drCategories) do
+            count = count + 1
+        end
+
+        for category, categoryName in pairs(drCategories) do
+            local spellList = DRList:GetSpells()
+
+            local iconTable = {
+                ["dynamic"] = "|TInterface\\ICONS\\INV_Misc_QuestionMark:16:16|t Dynamic",
+            }
+            local sortingTable = {
+                "dynamic",
+            }
+            local seen = {}
+
+            for spellID, drCategory in pairs(spellList) do
+                local spellInfo = C_Spell.GetSpellInfo(spellID)
+
+                if spellInfo and drCategory == category then
+                    local spellName = spellInfo.name
+                    local icon = spellInfo.originalIconID
+                    local value = "|T" .. icon .. ":16:16|t " .. spellName
+                    if not seen[value] then
+                        iconTable[spellID] = value
+                        table.insert(sortingTable, spellID)
+                        seen[value] = "seen"
+                    end
+                end
+            end
+
+            -- Sort spellIDs by spell name from iconTable value
+            table.sort(sortingTable, function(a, b)
+                if a == "dynamic" then return true end
+                if b == "dynamic" then return false end
+
+                local aText = iconTable[a]:match("|t%s*(.+)")
+                local bText = iconTable[b]:match("|t%s*(.+)")
+                return aText < bText
+            end)
+
+            diminishingReturnsOptions[category .. "Enabled"] = {
+                type = "toggle",
+                name = categoryName,
+                desc = "Choose the DR categories that you want to track",
+                get = function()
+                    return self.db.profile.drCategories[category].enabled
+                end,
+                set = function(_, value)
+                    self.db.profile.drCategories[category].enabled = value
+                    self:UpdateFrames()
+                    self:StyleFrames()
+                end,
+                order = diminishingReturnsOptions.header1.order + self.db.profile.drCategories[category].order,
+            }
+
+            diminishingReturnsOptions[category .. "Icon"] = {
+                type = "select",
+                name = categoryName,
+                desc = "Choose the icon that you want to display for this DR category",
+                values = iconTable,
+                sorting = sortingTable,
+                get = function()
+                    return self.db.profile.drCategories[category].icon
+                end,
+                set = function(_, value)
+                    self.db.profile.drCategories[category].icon = value
+                    -- self:UpdateFrames()
+                end,
+                order = diminishingReturnsOptions.header2.order + self.db.profile.drCategories[category].order,
+            }
+
+            diminishingReturnsOptions[category .. "Priority"] = {
+                type = "range",
+                name = categoryName,
+                desc = "",
+                min = 0,
+                max = count,
+                step = 1,
+                get = function ()
+                    return self.db.profile.drCategories[category].priority
+                end,
+                set = function (_, value)
+                    self.db.profile.drCategories[category].priority = value
+                    self:UpdateFrames()
+                end,
+                order = diminishingReturnsOptions.header3.order + self.db.profile.drCategories[category].order,
+            }
+        end
+
+        return diminishingReturnsOptions
+    end
+
+
+    options.args.diminishingReturns.args.drOptions.args = BuildDiminishingReturnsOptions()
 
     return options
 end

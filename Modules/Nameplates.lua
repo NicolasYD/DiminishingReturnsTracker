@@ -112,10 +112,11 @@ function NP:SetupDB()
             iconsSpacing = 5,
             borderSize = 1,
             frameSize = 20,
+            frameLevel = 100,
             point = "CENTER",
-            relativePoint = "BOTTOM",
+            relativePoint = "CENTER",
             offsetX = 0,
-            offsetY = 0,
+            offsetY = 15,
             positionLocked = true,
 
             -- Cooldown settings
@@ -401,6 +402,7 @@ function NP:StyleFrames()
 
             -- DR category frame styling
             frame:SetSize(settings.frameSize, settings.frameSize)
+            frame:SetFrameLevel(settings.frameLevel)
 
             -- Icon texture styling
             frame.icon:ClearAllPoints()
@@ -846,7 +848,7 @@ function NP:GetOptions()
                             cooldown = {
                                 type = "toggle",
                                 name = "Cooldown Animation",
-                                desc = "",
+                                desc = "Show or hide the cooldown animation.",
                                 get = function()
                                     return self.db.profile.cooldown
                                 end,
@@ -859,7 +861,7 @@ function NP:GetOptions()
                             cooldownReverse = {
                                 type = "toggle",
                                 name = "Cooldown Reverse",
-                                desc = "",
+                                desc = "Reverse the cooldown animation.",
                                 get = function()
                                     return self.db.profile.cooldownReverse
                                 end,
@@ -872,7 +874,7 @@ function NP:GetOptions()
                             cooldownEdge = {
                                 type = "toggle",
                                 name = "Cooldown Edge",
-                                desc = "",
+                                desc = "Show a glowing edge on the cooldown animation.",
                                 get = function()
                                     return self.db.profile.cooldownEdge
                                 end,
@@ -885,7 +887,7 @@ function NP:GetOptions()
                             cooldownNumbersShow = {
                                 type = "toggle",
                                 name = "Cooldown Numbers",
-                                desc = "",
+                                desc = "Show or hide the cooldown numbers.",
                                 get = function()
                                     return self.db.profile.cooldownNumbersShow
                                 end,
@@ -904,7 +906,7 @@ function NP:GetOptions()
                             cooldownSwipeAlpha = {
                                 type = "range",
                                 name = "Cooldown Swipe Alpha",
-                                desc = "",
+                                desc = "Set how dark the icon should be during the cooldown swipe animation",
                                 min = 0,
                                 max = 1,
                                 step = 0.1,
@@ -958,7 +960,7 @@ function NP:GetOptions()
                             cropIcons = {
                                 type = "toggle",
                                 name = "Crop Icons",
-                                desc = "",
+                                desc = "Zoom in on icons to get rid of the border",
                                 get = function()
                                     return self.db.profile.cropIcons
                                 end,
@@ -977,7 +979,7 @@ function NP:GetOptions()
                             growIcons = {
                                 type = "select",
                                 name = "Grow Direction",
-                                desc = "Choose in which direction new icons will be shown",
+                                desc = "Choose in which direction new icons will be added.",
                                 values = {
                                     ["LEFT"] = "Left",
                                     ["RIGHT"] = "Right",
@@ -997,7 +999,7 @@ function NP:GetOptions()
                             iconsSpacing = {
                                 type = "range",
                                 name = "Icon Spacing",
-                                desc = "Adjust the gap between the icons",
+                                desc = "Adjust the gap between the icons.",
                                 min = 0,
                                 max = 200,
                                 step = 1,
@@ -1020,7 +1022,7 @@ function NP:GetOptions()
                             borderSize = {
                                 type = "range",
                                 name = "Colored Border Size",
-                                desc = "",
+                                desc = "Set the size of the colored border.",
                                 min = 1,
                                 max = 20,
                                 step = 1,
@@ -1036,7 +1038,7 @@ function NP:GetOptions()
                             frameSize = {
                                 type = "range",
                                 name = "Icons Frame Size",
-                                desc = "",
+                                desc = "Set the size of the icons.",
                                 min = 0,
                                 max = 200,
                                 step = 1,
@@ -1048,6 +1050,22 @@ function NP:GetOptions()
                                     self:StyleFrames()
                                 end,
                                 order = 180,
+                            },
+                            frameLevel = {
+                                type = "range",
+                                name = "Icons Frame Level",
+                                desc = "Set the frame level of the icons.",
+                                min = 0,
+                                max = 200,
+                                step = 1,
+                                get = function ()
+                                    return self.db.profile.frameLevel
+                                end,
+                                set = function (_, value)
+                                    self.db.profile.frameLevel = value
+                                    self:StyleFrames()
+                                end,
+                                order = 190,
                             },
                         },
                     },
@@ -1082,8 +1100,8 @@ function NP:GetOptions()
                             },
                             point = {
                                 type = "select",
-                                name = "Anchor Frame Point",
-                                desc = "Which point of the anchor frame to anchor to.",
+                                name = "Point",
+                                desc = "Choose the point on the icon that should be used for anchoring.",
                                 values = {
                                     ["TOP"] = "TOP",
                                     ["TOPLEFT"] = "TOPLEFT",
@@ -1106,8 +1124,8 @@ function NP:GetOptions()
                             },
                             relativePoint = {
                                 type = "select",
-                                name = "Icon Frame Point",
-                                desc = "Which point of the icon frame to anchor to.",
+                                name = "Relative Point",
+                                desc = "Choose the point on the parent frame to which the icon should be anchored.",
                                 values = {
                                     ["TOP"] = "TOP",
                                     ["TOPLEFT"] = "TOPLEFT",
@@ -1137,7 +1155,7 @@ function NP:GetOptions()
                             offsetX = {
                                 type = "range",
                                 name = "Icon Frame Offset X",
-                                desc = "",
+                                desc = "Set the horizontal offset of the icon from the parent frame.",
                                 min = -200,
                                 max = 200,
                                 step = 1,
@@ -1153,7 +1171,7 @@ function NP:GetOptions()
                             offsetY = {
                                 type = "range",
                                 name = "Icon Frame Offset Y",
-                                desc = "",
+                                desc = "Set the vertical offset of the icon from the parent frame.",
                                 min = -200,
                                 max = 200,
                                 step = 1,
@@ -1193,7 +1211,7 @@ function NP:GetOptions()
                             excludeFriendly = {
                                 type = "toggle",
                                 name = "Exclude Friendly",
-                                desc = "",
+                                desc = "Don't show DRs on friendly units.",
                                 get = function()
                                     return self.db.profile.excludeFriendly
                                 end,
@@ -1205,7 +1223,7 @@ function NP:GetOptions()
                             excludeNeutral = {
                                 type = "toggle",
                                 name = "Exclude Neutral",
-                                desc = "",
+                                desc = "Don't show DRs on neutral units.",
                                 get = function()
                                     return self.db.profile.excludeNeutral
                                 end,
@@ -1217,7 +1235,7 @@ function NP:GetOptions()
                             excludeHostile = {
                                 type = "toggle",
                                 name = "Exclude Hostile",
-                                desc = "",
+                                desc = "Don't show DRs on hostile units.",
                                 get = function()
                                     return self.db.profile.excludeHostile
                                 end,
@@ -1229,7 +1247,7 @@ function NP:GetOptions()
                             excludeNPCs = {
                                 type = "toggle",
                                 name = "Exclude NPCs",
-                                desc = "",
+                                desc = "Don't show DRs on NPCs.",
                                 get = function()
                                     return self.db.profile.excludeNPCs
                                 end,
@@ -1241,7 +1259,7 @@ function NP:GetOptions()
                             excludePets = {
                                 type = "toggle",
                                 name = "Exclude Pets",
-                                desc = "",
+                                desc = "Don't show DRs on pets",
                                 get = function()
                                     return self.db.profile.excludePets
                                 end,
@@ -1253,7 +1271,7 @@ function NP:GetOptions()
                             excludeGuardians = {
                                 type = "toggle",
                                 name = "Exclude Guardians",
-                                desc = "",
+                                desc = "Don't show DRs on guardians (e.g. wild imps).",
                                 get = function()
                                     return self.db.profile.excludeGuardians
                                 end,
@@ -1265,7 +1283,7 @@ function NP:GetOptions()
                             excludeObjects = {
                                 type = "toggle",
                                 name = "Exclude Objects",
-                                desc = "",
+                                desc = "Don't show DRs on objects (e.g. totems).",
                                 get = function()
                                     return self.db.profile.excludeObjects
                                 end,
@@ -1373,7 +1391,7 @@ function NP:GetOptions()
             diminishingReturnsOptions[category .. "Enabled"] = {
                 type = "toggle",
                 name = categoryName,
-                desc = "Choose the DR categories that you want to track",
+                desc = "Track " .. categoryName .. ".",
                 get = function()
                     return self.db.profile.drCategories[category].enabled
                 end,
@@ -1391,7 +1409,7 @@ function NP:GetOptions()
             diminishingReturnsOptions[category .. "Icon"] = {
                 type = "select",
                 name = categoryName,
-                desc = "Choose the icon that you want to display for this DR category",
+                desc = "Choose the icon that you want to display for the '" .. categoryName .. "' category.",
                 values = iconTable,
                 sorting = sortingTable,
                 get = function()
@@ -1410,7 +1428,7 @@ function NP:GetOptions()
             diminishingReturnsOptions[category .. "Priority"] = {
                 type = "range",
                 name = categoryName,
-                desc = "",
+                desc = "Choose the priority for the '" .. categoryName .. "' category (higher priority DRs are shown first).",
                 min = 0,
                 max = count,
                 step = 1,

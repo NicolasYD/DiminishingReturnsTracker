@@ -1,3 +1,7 @@
+v11.2.0.7-beta
+- New Nameplates Module: DRs can now be displayed on nameplates!
+- UnitFrames Module: DRs can now be displayed for arena123 and are bound to the Blizzard arena frames by default.
+
 v11.2.0.6-beta
 - Fixed a bug, where Testmode would not trigger.
 

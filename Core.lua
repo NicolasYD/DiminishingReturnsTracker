@@ -1,5 +1,5 @@
 -- Create a new addon object using AceAddon-3.0 and include AceConsole-3.0 for chat commands
-DRT = LibStub("AceAddon-3.0"):NewAddon("DRT", "AceConsole-3.0")
+DRT = LibStub("AceAddon-3.0"):NewAddon("DRT", "AceConsole-3.0", "AceEvent-3.0")
 
 
 -- Called when the addon is first loaded (before it is enabled)

@@ -43,6 +43,8 @@ function DRT:OnEnable()
     -- Register slash commands to open the configuration panel
     self:RegisterChatCommand("drt", "OpenOptions")
     self:RegisterChatCommand("diminishingreturnstracker", "OpenOptions")
+
+	self:RegisterEvent("PLAYER_ENTERING_WORLD")
 end
 
 
@@ -70,14 +72,43 @@ end
 
 -- Execute the test function of every enabled module
 function DRT:TestModules()
+	if not DRT.testing then
+		DRT.testing = true
+	else
+		DRT.testing = false
+	end
+
     for name, module in self:IterateModules() do
-        if type(module.Test) == "function" then
-			if self.db.profile.modules[name].enabled then
-            	module:Test()
+		if self.db.profile.modules[name].enabled then
+			if DRT.testing then
+				if module.StartTest or type(module.StartTest) == "function" then
+					module:StartTest()
+				else
+					print("ERROR: " .. name .. " Module is missing the StartTest() function!")
+				end
+			else
+				if module.StopTest or type(module.StopTest) == "function" then
+					module:StopTest()
+				else
+					print("ERROR: " .. name .. " Module is missing the StopTest() function!")
+				end
 			end
-        else
-            return
-        end
+		end
+    end
+end
+
+
+function DRT:PLAYER_ENTERING_WORLD()
+    local inInstance, instanceType = IsInInstance()
+    if inInstance and instanceType == "arena" then
+		DRT.testing = false
+		for name, module in self:IterateModules() do
+		if self.db.profile.modules[name].enabled then
+				if module.StopTest or type(module.StopTest) == "function" then
+					module:StopTest()
+				end
+			end
+		end
     end
 end
 

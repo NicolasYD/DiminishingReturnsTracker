@@ -7,7 +7,6 @@ local DRList = LibStub("DRList-1.0")
 function UF:OnInitialize()
     self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
     self:RegisterEvent("PLAYER_TARGET_CHANGED")
-    self:RegisterEvent("PLAYER_ENTERING_WORLD")
     self:RegisterEvent("GROUP_ROSTER_UPDATE")
 
     if not self.db then
@@ -34,11 +33,17 @@ function UF:OnEnable()
         end
     end
     self:UpdateFrame()
+
+    if DRT.testing then
+        self:StartTest()
+    end
 end
 
 
 function UF:OnDisable()
-    self:CancelTestmode()
+    if DRT.testing then
+        self:StopTest()
+    end
     self:HideContainers()
 end
 
@@ -292,7 +297,7 @@ end
 
 
 function UF:COMBAT_LOG_EVENT_UNFILTERED()
-    if UF.testing then return end
+    if DRT.testing then return end
 
 
     local function GetDebuffDuration(unitToken, spellID)
@@ -402,7 +407,7 @@ end
 
 
 function UF:PLAYER_TARGET_CHANGED()
-    if UF.testing then return end
+    if DRT.testing then return end
 
     local targetGUID = UnitGUID("target")
     local trackedUnit = self.trackedPlayers and self.trackedPlayers[targetGUID]
@@ -426,14 +431,6 @@ function UF:PLAYER_TARGET_CHANGED()
                 self:ShowDRIcons(drCategory, targetGUID)
             end
         end
-    end
-end
-
-
-function UF:PLAYER_ENTERING_WORLD()
-    local inInstance, instanceType = IsInInstance()
-    if inInstance and instanceType == "arena" then
-        self:CancelTestmode()
     end
 end
 
@@ -488,13 +485,6 @@ function UF:ShowContainers(unitToken)
                 frame:Show()
             end
         end
-    end
-end
-
-
-function UF:CancelTestmode()
-    if UF.testing then
-        self:Test()
     end
 end
 
@@ -574,7 +564,7 @@ end
 
 function UF:ShowDRIcons(drCategory, unitGUID)
     local unitTokens
-    if UF.testing then
+    if DRT.testing then
         unitTokens = {unitGUID}
     else
         unitTokens = self:GetUnitTokens(unitGUID)
@@ -786,7 +776,7 @@ function UF:UpdateFrame()
 end
 
 
-function UF:Test()
+function UF:StartTest()
     local count = 0
 
 
@@ -853,32 +843,30 @@ function UF:Test()
         end)
     end
 
+    TestIcons()
+end
 
-    if not UF.testing then
-        UF.testing = true
-        TestIcons()
-    else
-        UF.testing = false
-        UF.trackedPlayers = {}
-        if self.frames then
-            for unit in pairs(self.frames) do
-                for drCategory in pairs(self.frames[unit]) do
-                    local frame = self.frames[unit][drCategory]
-                    frame.active = false
-                    frame:SetAlpha(0)
-                end
+
+function UF:StopTest()
+    self.trackedPlayers = {}
+    if self.frames then
+        for unit in pairs(self.frames) do
+            for drCategory in pairs(self.frames[unit]) do
+                local frame = self.frames[unit][drCategory]
+                frame.active = false
+                frame:SetAlpha(0)
             end
         end
-        if UF.testTimer then
-            UF.testTimer:Cancel()
-            UF.testTimer = nil
-        end
+    end
+    if self.testTimer then
+        self.testTimer:Cancel()
+        self.testTimer = nil
     end
 end
 
 
 function UF:ResetModule()
-    self:CancelTestmode()
+    self:StopTest()
     self.db:ResetProfile()
     self:UpdateFrame()
 end

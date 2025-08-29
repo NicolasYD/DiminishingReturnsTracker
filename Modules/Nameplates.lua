@@ -21,16 +21,23 @@ function NP:OnEnable()
     self.categoryFrames = self.categoryFrames or {}
     self.trackedUnits = self.trackedUnits or {}
     self.visibleNameplates = self.visibleNameplates or {}
+
+    if DRT.testing then
+        self:StartTest()
+    end
 end
 
 
 function NP:OnDisable()
-
+    if DRT.testing then
+        self:StopTest()
+    end
 end
 
 
 function NP:OnProfileChanged()
-
+    self:StyleFrames()
+    self:UpdateFrames()
 end
 
 
@@ -115,7 +122,7 @@ function NP:SetupDB()
             cooldown = true,
             cooldownReverse = true,
             cooldownEdge = true,
-            cooldownNumbersHide = false,
+            cooldownNumbersShow = true,
             cooldownSwipeAlpha = 0.6,
         }
     })
@@ -156,7 +163,7 @@ end
 
 
 function NP:COMBAT_LOG_EVENT_UNFILTERED()
-    if NP.testing then return end
+    if DRT.testing then return end
 
 
     local function GetDebuffDuration(unitToken, spellID)
@@ -412,7 +419,7 @@ function NP:StyleFrames()
             frame.cooldown:SetReverse(settings.cooldownReverse)
             frame.cooldown:SetSwipeColor(0, 0, 0, settings.cooldownSwipeAlpha)
             frame.cooldown:SetDrawEdge(settings.cooldown and settings.cooldownEdge)
-            frame.cooldown:SetHideCountdownNumbers(settings.cooldownNumbersHide)
+            frame.cooldown:SetHideCountdownNumbers(not settings.cooldownNumbersShow)
 
             -- Border frame styling
             frame.border:ClearAllPoints()
@@ -676,7 +683,7 @@ function NP:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
 end
 
 
-function NP:Test()
+function NP:StartTest()
     local count = 0
 
 
@@ -741,26 +748,24 @@ function NP:Test()
         end)
     end
 
+    TestIcons()
+end
 
-    if not NP.testing then
-        NP.testing = true
-        TestIcons()
-    else
-        NP.testing = false
-        NP.trackedUnits = {}
-        if self.categoryFrames then
-            for nameplateUnit in pairs(self.categoryFrames) do
-                for drCategory in pairs(self.categoryFrames[nameplateUnit]) do
-                    local frame = self.categoryFrames[nameplateUnit][drCategory]
-                    frame.active = false
-                    frame:SetAlpha(0)
-                end
+
+function NP:StopTest()
+    self.trackedUnits = {}
+    if self.categoryFrames then
+        for nameplateUnit in pairs(self.categoryFrames) do
+            for drCategory in pairs(self.categoryFrames[nameplateUnit]) do
+                local frame = self.categoryFrames[nameplateUnit][drCategory]
+                frame.active = false
+                frame:SetAlpha(0)
             end
         end
-        if NP.testTimer then
-            NP.testTimer:Cancel()
-            NP.testTimer = nil
-        end
+    end
+    if self.testTimer then
+        self.testTimer:Cancel()
+        self.testTimer = nil
     end
 end
 
@@ -877,15 +882,15 @@ function NP:GetOptions()
                                 end,
                                 order = 40,
                             },
-                            cooldownNumbersHide = {
+                            cooldownNumbersShow = {
                                 type = "toggle",
                                 name = "Cooldown Numbers",
                                 desc = "",
                                 get = function()
-                                    return self.db.profile.cooldownNumbersHide
+                                    return self.db.profile.cooldownNumbersShow
                                 end,
                                 set = function(_, value)
-                                    self.db.profile.cooldownNumbersHide = value
+                                    self.db.profile.cooldownNumbersShow = value
                                     self:StyleFrames()
                                 end,
                                 order = 50,
@@ -1056,7 +1061,7 @@ function NP:GetOptions()
                         end,
                         order = 20,
                         args = {
-                            lockPosition = {
+                            --[[ lockPosition = {
                                 type = "toggle",
                                 name = "Lock Position",
                                 desc = "If unlocked, icons can be moved by mouse.",
@@ -1068,7 +1073,7 @@ function NP:GetOptions()
                                     self:StyleFrames()
                                 end,
                                 order = 10,
-                            },
+                            }, ]]
                             separator1 = {
                                 type = "description",
                                 name = "",
@@ -1133,8 +1138,8 @@ function NP:GetOptions()
                                 type = "range",
                                 name = "Icon Frame Offset X",
                                 desc = "",
-                                min = -100,
-                                max = 100,
+                                min = -200,
+                                max = 200,
                                 step = 1,
                                 get = function ()
                                     return self.db.profile.offsetX
@@ -1149,8 +1154,8 @@ function NP:GetOptions()
                                 type = "range",
                                 name = "Icon Frame Offset Y",
                                 desc = "",
-                                min = -100,
-                                max = 100,
+                                min = -200,
+                                max = 200,
                                 step = 1,
                                 get = function ()
                                     return self.db.profile.offsetY
@@ -1374,8 +1379,11 @@ function NP:GetOptions()
                 end,
                 set = function(_, value)
                     self.db.profile.drCategories[category].enabled = value
-                    self:UpdateFrames()
                     self:StyleFrames()
+                    if DRT.testing then
+                        self:StopTest()
+                        self:StartTest()
+                    end
                 end,
                 order = diminishingReturnsOptions.header1.order + self.db.profile.drCategories[category].order,
             }
@@ -1391,7 +1399,10 @@ function NP:GetOptions()
                 end,
                 set = function(_, value)
                     self.db.profile.drCategories[category].icon = value
-                    -- self:UpdateFrames()
+                    if DRT.testing then
+                        self:StopTest()
+                        self:StartTest()
+                    end
                 end,
                 order = diminishingReturnsOptions.header2.order + self.db.profile.drCategories[category].order,
             }

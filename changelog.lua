@@ -1,33 +1,51 @@
-v11.2.0.7-beta
+DRT_CHANGELOGS = {
+["v11.2.0.7-beta"] = [[
 - New Nameplates Module: DRs can now be displayed on nameplates!
 - UnitFrames Module: DRs can now be displayed for arena123 and are bound to the Blizzard arena frames by default.
+]],
 
-v11.2.0.6-beta
+["v11.2.0.6-beta"] = [[
 - Fixed a bug, where Testmode would not trigger.
+]],
 
-v11.2.0.5-beta
+["v11.2.0.5-beta"] = [[
 - Added option to manage profiles.
 - Minor changes that affect frame visibility.
+]],
 
-v11.2.0.4-beta
+["v11.2.0.4-beta"] =[[
 - Added option to move the icons by mouse if unlocked.
 - Increased the range of the sliders to move the icons.
 - Rearranged settings in options window.
+]],
 
-v11.2.0.3-beta
+["v11.2.0.3-beta"] = [[
 - Added a button to copy settings from another unit.
 - Added a button to reset settings of a specific unit to defaults.
 - Automatically deactivate test mode when entering arena and prevent test mode from being activated in arena.
+]],
 
-v11.2.0.2-beta
+["v11.2.0.2-beta"] = [[
 - Added a frame selector button to the options to set anchor frames.
+]],
 
-v11.2.0.1-beta
+["v11.2.0.1-beta"] = [[
 - Beta version.
 - Fixed couple of bugs.
+]],
 
-v11.1.7.2-alpha
+["v11.1.7.2-alpha"] = [[
 - Expanded functionality.
+]],
 
-v11.1.7.1-alpha
+["v11.1.7.1-alpha"] = [[
 - Alpha version.
+]],
+
+--@debug@
+["@project-version@"] = [[
+- This is just for testing purposes.
+- This too.
+]],
+--@end-debug@
+}

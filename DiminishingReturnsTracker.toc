@@ -7,6 +7,8 @@
 ## SavedVariables: DRTDB
 ## X-Curse-Project-ID: 1310424
 
+changelog.lua
+
 Embeds.xml
 
 Core.lua

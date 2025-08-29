@@ -896,7 +896,6 @@ end
 
 
 function UF:ResetModule()
-    self:StopTest()
     self.db:ResetProfile()
     self:UpdateFrame()
 end

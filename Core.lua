@@ -1,4 +1,4 @@
--- Create a new addon object using AceAddon-3.0 and include AceConsole-3.0 for chat commands
+-- Create a new addon object using AceAddon-3.0 and include AceConsole-3.0 and AceEvent-3.0 as mixins
 DRT = LibStub("AceAddon-3.0"):NewAddon("DRT", "AceConsole-3.0", "AceEvent-3.0")
 
 
@@ -35,6 +35,8 @@ function DRT:OnInitialize()
 
     -- Get the addon configuration options
     self:GetOptions()
+
+	self:CheckVersion()
 end
 
 
@@ -60,6 +62,34 @@ function DRT:OnProfileChanged()
         else
             return
         end
+    end
+end
+
+
+function DRT:CheckVersion()
+	local currentVersion = C_AddOns.GetAddOnMetadata("DiminishingReturnsTracker", "Version")
+	local storedVersion = self.db.global.version
+
+	StaticPopupDialogs["DRT_CHANGELOG"] = {
+		text = "",
+		button1 = "OK",
+		timeout = 0,
+		whileDead = true,
+		hideOnEscape = false,
+	}
+
+    if not storedVersion or storedVersion ~= currentVersion then
+        -- Get changelog from changelog table
+        local changelog = DRT_CHANGELOGS[currentVersion]
+
+		if changelog then
+			-- Inject text dynamically
+			StaticPopupDialogs["DRT_CHANGELOG"].text = "Diminishing Returns Tracker (DRT)" .. "\n\n" .. "|cff00ff00" .. "New Version " .. currentVersion .. "|r" .. "\n\n" .. changelog
+			StaticPopup_Show("DRT_CHANGELOG")
+		end
+
+        -- Save the new version to the database
+        self.db.global.version = currentVersion
     end
 end
 

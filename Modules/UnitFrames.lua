@@ -1684,7 +1684,7 @@ function UF:GetOptions()
                     set = function (_, value)
                         self.db.profile.units[unit].enabled = value
                         if value then
-                            self:ShowContainers(umit)
+                            self:ShowContainers(unit)
                         else
                             self:HideContainers(unit)
                         end

@@ -125,7 +125,7 @@ function UF:SetupDB()
         drIndicator = true,
         borderSize = 1,
         customIndicator = false,
-        lockPosition = true,
+        positionLocked = true,
     }
 
 
@@ -1020,7 +1020,7 @@ end
 
 function UF:MoveFrame(frame, unit, onStopCallback)
     local settings = self.db.profile.units[unit]
-    local isLocked = settings.lockPosition
+    local isLocked = settings.positionLocked
 
     if isLocked then
         -- Disable dragging
@@ -1326,15 +1326,15 @@ function UF:BuildGeneralOptions(unit)
             end,
             order = 3,
             args = {
-                lockPosition = {
+                positionLocked = {
                     type = "toggle",
                     name = "Lock Position",
                     desc = "If unlocked, icons can be moved by mouse.",
                     get = function()
-                        return self.db.profile.units[unit].lockPosition
+                        return self.db.profile.units[unit].positionLocked
                     end,
                     set = function(_, value)
-                        self.db.profile.units[unit].lockPosition = value
+                        self.db.profile.units[unit].positionLocked = value
                         self:StyleFrames()
                     end,
                     order = 10,

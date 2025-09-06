@@ -21,17 +21,15 @@ function UF:OnEnable()
     self:ShowContainers()
 
     self.unitContainers = self.unitContainers or {}
-    self.frames = self.frames or {}
+    self.categoryFrames = self.categoryFrames or {}
 
     for unitToken in pairs(self.db.profile.units) do
-        self.frames[unitToken] = self.frames[unitToken] or {}
-        for drCategory in pairs(drCategories) do
-            if not self.frames[unitToken][drCategory] then
-                self:CreateFrame(unitToken, drCategory)
-            end
+        self.categoryFrames[unitToken] = self.categoryFrames[unitToken] or {}
+        if not self.unitContainers[unitToken] then
+            self:CreateFrames(unitToken)
         end
     end
-    self:UpdateFrame()
+    self:StyleFrames()
 
     if DRT.testing then
         self:StartTest()
@@ -48,7 +46,8 @@ end
 
 
 function UF:OnProfileChanged()
-    self:UpdateFrame()
+    self:StyleFrames()
+    self:UpdateFrames()
 end
 
 
@@ -108,18 +107,19 @@ function UF:SetupDB()
         enabled = true,
         cropIcons = true,
         frameSize = 30,
+        frameLevel = 100,
         anchorTo = "UIParent",
-        anchorPoint = "TOPRIGHT",
-        iconPoint = "TOPRIGHT",
+        point = "TOPRIGHT",
+        relativePoint = "TOPRIGHT",
         offsetX = 0,
         offsetY = 0,
-        growIcons = "Left",
+        growIcons = "LEFT",
         iconsSpacing = 5,
         cooldown = true,
         cooldownReverse = true,
         cooldownSwipeAlpha = 0.6,
         cooldownEdge = true,
-        cooldownNumbers = true,
+        cooldownNumbersShow = true,
         categories = defaultCategories,
         coloredBorder = true,
         drIndicator = true,
@@ -149,27 +149,27 @@ function UF:SetupDB()
                     anchorTo = "PlayerFrame",
                     offsetX = -20,
                     offsetY = -5,
-                    growIcons = "Left",
+                    growIcons = "LEFT",
                     order = 1,
                     }),
                 target = mergeTables(sharedOptions, {
                     anchorTo = "TargetFrame",
-                    anchorPoint = "TOPLEFT",
-                    iconPoint = "TOPLEFT",
+                    point = "TOPLEFT",
+                    relativePoint = "TOPLEFT",
                     offsetX = 20,
                     offsetY = -5,
-                    growIcons = "Right",
+                    growIcons = "RIGHT",
                     order = 2,
                 }),
                 focus = mergeTables(sharedOptions, {
                     enabled = false,
                     frameSize = 30,
                     anchorTo = "FocusFrame",
-                    anchorPoint = "TOPLEFT",
-                    iconPoint = "TOPLEFT",
+                    point = "TOPLEFT",
+                    relativePoint = "TOPLEFT",
                     offsetX = 20,
                     offsetY = -5,
-                    growIcons = "Right",
+                    growIcons = "RIGHT",
                     order = 3,
                 }),
                 party1 = mergeTables(sharedOptions, {
@@ -200,8 +200,8 @@ function UF:SetupDB()
                     enabled = false,
                     frameSize = 35,
                     anchorTo = "CompactArenaFrameMember1",
-                    anchorPoint = "BOTTOMLEFT",
-                    iconPoint = "BOTTOMRIGHT",
+                    point = "BOTTOMLEFT",
+                    relativePoint = "BOTTOMRIGHT",
                     offsetX = -5,
                     offsetY = 5,
                     order = 8,
@@ -210,8 +210,8 @@ function UF:SetupDB()
                     enabled = false,
                     frameSize = 35,
                     anchorTo = "CompactArenaFrameMember2",
-                    anchorPoint = "BOTTOMLEFT",
-                    iconPoint = "BOTTOMRIGHT",
+                    point = "BOTTOMLEFT",
+                    relativePoint = "BOTTOMRIGHT",
                     offsetX = -5,
                     offsetY = 5,
                     order = 9,
@@ -220,8 +220,8 @@ function UF:SetupDB()
                     enabled = false,
                     frameSize = 35,
                     anchorTo = "CompactArenaFrameMember3",
-                    anchorPoint = "BOTTOMLEFT",
-                    iconPoint = "BOTTOMRIGHT",
+                    point = "BOTTOMLEFT",
+                    relativePoint = "BOTTOMRIGHT",
                     offsetX = -5,
                     offsetY = 5,
                     order = 10,
@@ -652,7 +652,7 @@ function UF:PLAYER_TARGET_CHANGED()
     local targetGUID = UnitGUID("target")
     local trackedUnit = self.trackedPlayers and self.trackedPlayers[targetGUID]
     local unitToken = "target"
-    local targetFrames = self.frames[unitToken]
+    local targetFrames = self.categoryFrames[unitToken]
 
     -- Hide all frames associated with "target" when the player changes target
     for _, targetFrame in pairs(targetFrames) do
@@ -664,7 +664,7 @@ function UF:PLAYER_TARGET_CHANGED()
     if not trackedUnit then return end
 
     for drCategory, data in pairs(trackedUnit) do
-        local frame = self.frames[unitToken][drCategory]
+        local frame = self.categoryFrames[unitToken][drCategory]
 
         if frame then
             if data.expirationTime and GetTime() < data.expirationTime then
@@ -683,10 +683,10 @@ end
 
 
 function UF:HideAllIcons()
-    if self.frames then
-        for unit, _ in pairs(self.frames) do
-            for category, _ in pairs(self.frames[unit]) do
-                self.frames[unit][category]:SetAlpha(0)
+    if self.categoryFrames then
+        for unit, _ in pairs(self.categoryFrames) do
+            for category, _ in pairs(self.categoryFrames[unit]) do
+                self.categoryFrames[unit][category]:SetAlpha(0)
             end
         end
     end
@@ -812,7 +812,7 @@ function UF:ShowDRIcons(drCategory, unitGUID)
 
     for _, unitToken in ipairs(unitTokens) do
         if self.db.profile.units[unitToken] then
-            local frame = self.frames[unitToken][drCategory]
+            local frame = self.categoryFrames[unitToken][drCategory]
             local data = self.trackedPlayers[unitGUID][drCategory]
             local categoryIcon = self.db.profile.units[unitToken].categories[drCategory].icon
 
@@ -864,7 +864,7 @@ function UF:ShowDRIcons(drCategory, unitGUID)
                         self:SetScript("OnUpdate", nil)
                         self:SetAlpha(0)
                         self.active = false
-                        UF:UpdateFrame()
+                        UF:UpdateFrames()
                     end
                 end)
             end
@@ -946,10 +946,10 @@ end
 
 function UF:StopTest()
     self.trackedPlayers = {}
-    if self.frames then
-        for unit in pairs(self.frames) do
-            for drCategory in pairs(self.frames[unit]) do
-                local frame = self.frames[unit][drCategory]
+    if self.categoryFrames then
+        for unit in pairs(self.categoryFrames) do
+            for drCategory in pairs(self.categoryFrames[unit]) do
+                local frame = self.categoryFrames[unit][drCategory]
                 frame.active = false
                 frame:SetAlpha(0)
             end
@@ -964,7 +964,8 @@ end
 
 function UF:ResetModule()
     self.db:ResetProfile()
-    self:UpdateFrame()
+    self:StyleFrames()
+    self:UpdateFrames()
 end
 
 
@@ -987,7 +988,7 @@ function UF:ResetUnitSettings(unit)
 
     -- Deep copy default settings to profile.units[unit]
     self.db.profile.units[unit] = DeepCopy(defaults)
-    self:UpdateFrame()
+    self:StyleFrames()
 end
 
 
@@ -1076,7 +1077,7 @@ end
 
 
 function UF:BuildGeneralOptions(unit)
-    local anchorPointValues = {
+    local pointValues = {
         TOP = "TOP",
         TOPLEFT = "TOPLEFT",
         TOPRIGHT = "TOPRIGHT",
@@ -1116,7 +1117,7 @@ function UF:BuildGeneralOptions(unit)
                     end,
                     set = function(_, value)
                         self.db.profile.units[unit].cooldown = value
-                        self:UpdateFrame()
+                        self:StyleFrames()
                     end,
                     order = 20,
                 },
@@ -1129,7 +1130,7 @@ function UF:BuildGeneralOptions(unit)
                     end,
                     set = function(_, value)
                         self.db.profile.units[unit].cooldownReverse = value
-                        self:UpdateFrame()
+                        self:StyleFrames()
                     end,
                     order = 30,
                 },
@@ -1142,20 +1143,20 @@ function UF:BuildGeneralOptions(unit)
                     end,
                     set = function(_, value)
                         self.db.profile.units[unit].cooldownEdge = value
-                        self:UpdateFrame()
+                        self:StyleFrames()
                     end,
                     order = 40,
                 },
-                cooldownNumbers = {
+                cooldownNumbersShow = {
                     type = "toggle",
                     name = "Cooldown Numbers",
                     desc = "",
                     get = function()
-                        return self.db.profile.units[unit].cooldownNumbers
+                        return self.db.profile.units[unit].cooldownNumbersShow
                     end,
                     set = function(_, value)
-                        self.db.profile.units[unit].cooldownNumbers = value
-                        self:UpdateFrame()
+                        self.db.profile.units[unit].cooldownNumbersShow = value
+                        self:StyleFrames()
                     end,
                     order = 41,
                 },
@@ -1177,7 +1178,7 @@ function UF:BuildGeneralOptions(unit)
                     end,
                     set = function(_, value)
                         self.db.profile.units[unit].cooldownSwipeAlpha = value
-                        self:UpdateFrame()
+                        self:StyleFrames()
                     end,
                     order = 60,
                 },
@@ -1202,7 +1203,7 @@ function UF:BuildGeneralOptions(unit)
                     end,
                     set = function(_, value)
                         self.db.profile.units[unit].coloredBorder = value
-                        self:UpdateFrame()
+                        self:StyleFrames()
                     end,
                     order = 88,
                 },
@@ -1215,7 +1216,7 @@ function UF:BuildGeneralOptions(unit)
                     end,
                     set = function(_, value)
                         self.db.profile.units[unit].drIndicator = value
-                        self:UpdateFrame()
+                        self:StyleFrames()
                     end,
                     order = 89,
                 },
@@ -1228,7 +1229,7 @@ function UF:BuildGeneralOptions(unit)
                     end,
                     set = function(_, value)
                         self.db.profile.units[unit].cropIcons = value
-                        self:UpdateFrame()
+                        self:StyleFrames()
                     end,
                     order = 90,
                 },
@@ -1243,17 +1244,18 @@ function UF:BuildGeneralOptions(unit)
                     name = "Grow Direction",
                     desc = "Choose in which direction new icons will be shown",
                     values = {
-                        ["Left"] = "Left",
-                        ["Right"] = "Right",
-                        ["Up"] = "Up",
-                        ["Down"] = "Down"
+                        ["LEFT"] = "LEFT",
+                        ["RIGHT"] = "RIGHT",
+                        ["UP"] = "UP",
+                        ["DOWN"] = "DOWN"
                     },
                     get = function()
                         return self.db.profile.units[unit].growIcons
                     end,
                     set = function(_, value)
                         self.db.profile.units[unit].growIcons = value
-                        self:UpdateFrame()
+                        self:StyleFrames()
+                        self:UpdateFrames()
                     end,
                     order = 110,
                 },
@@ -1269,7 +1271,8 @@ function UF:BuildGeneralOptions(unit)
                     end,
                     set = function (_, value)
                         self.db.profile.units[unit].iconsSpacing = value
-                        self:UpdateFrame()
+                        self:StyleFrames()
+                        self:UpdateFrames()
                     end,
                     order = 120,
                 },
@@ -1291,7 +1294,7 @@ function UF:BuildGeneralOptions(unit)
                     end,
                     set = function (_, value)
                         self.db.profile.units[unit].borderSize = value
-                        self:UpdateFrame()
+                        self:StyleFrames()
                     end,
                     order = 140,
                 },
@@ -1307,7 +1310,7 @@ function UF:BuildGeneralOptions(unit)
                     end,
                     set = function (_, value)
                         self.db.profile.units[unit].frameSize = value
-                        self:UpdateFrame()
+                        self:StyleFrames()
                     end,
                     order = 150,
                 },
@@ -1332,7 +1335,7 @@ function UF:BuildGeneralOptions(unit)
                     end,
                     set = function(_, value)
                         self.db.profile.units[unit].lockPosition = value
-                        self:UpdateFrame()
+                        self:StyleFrames()
                     end,
                     order = 10,
                 },
@@ -1351,7 +1354,7 @@ function UF:BuildGeneralOptions(unit)
                     end,
                     set = function(_, value)
                         self.db.profile.units[unit].anchorTo = value
-                        self:UpdateFrame()
+                        self:StyleFrames()
                     end,
                     disabled = function ()
                         return not self:IsEnabled() or not self.db.profile.units[unit].enabled
@@ -1366,7 +1369,7 @@ function UF:BuildGeneralOptions(unit)
                         DRT:FrameSelector(function(selectedFrame)
                             self.db.profile.units[unit].anchorTo = selectedFrame
                             ACR:NotifyChange("DRT")
-                            self:UpdateFrame()
+                            self:StyleFrames()
                         end)
                     end,
                     disabled = function ()
@@ -1380,34 +1383,34 @@ function UF:BuildGeneralOptions(unit)
                     width = "full",
                     order = 50,
                 },
-                anchorPoint = {
+                point = {
                     type = "select",
                     name = "Anchor Frame Point",
                     desc = "Which point of the anchor frame to anchor to.",
-                    values = anchorPointValues,
+                    values = pointValues,
                     get = function()
-                        return self.db.profile.units[unit].anchorPoint
+                        return self.db.profile.units[unit].point
                     end,
                     set = function(_, value)
-                        self.db.profile.units[unit].anchorPoint = value
-                        self:UpdateFrame()
+                        self.db.profile.units[unit].point = value
+                        self:StyleFrames()
                     end,
                     disabled = function ()
                         return not self:IsEnabled() or not self.db.profile.units[unit].enabled
                     end,
                     order = 60,
                 },
-                iconPoint = {
+                relativePoint = {
                     type = "select",
                     name = "Icon Frame Point",
                     desc = "Which point of the icon frame to anchor to.",
-                    values = anchorPointValues,
+                    values = pointValues,
                     get = function()
-                        return self.db.profile.units[unit].iconPoint
+                        return self.db.profile.units[unit].relativePoint
                     end,
                     set = function(_, value)
-                        self.db.profile.units[unit].iconPoint = value
-                        self:UpdateFrame()
+                        self.db.profile.units[unit].relativePoint = value
+                        self:StyleFrames()
                     end,
                     disabled = function ()
                         return not self:IsEnabled() or not self.db.profile.units[unit].enabled
@@ -1432,7 +1435,7 @@ function UF:BuildGeneralOptions(unit)
                     end,
                     set = function (_, value)
                         self.db.profile.units[unit].offsetX = value
-                        self:UpdateFrame()
+                        self:StyleFrames()
                     end,
                     order = 90,
                 },
@@ -1448,7 +1451,7 @@ function UF:BuildGeneralOptions(unit)
                     end,
                     set = function (_, value)
                         self.db.profile.units[unit].offsetY = value
-                        self:UpdateFrame()
+                        self:StyleFrames()
                     end,
                     order = 100,
                 },
@@ -1548,7 +1551,11 @@ function UF:BuildDiminishingReturnsOptions(unit)
             end,
             set = function(_, value)
                 self.db.profile.units[unit].categories[category].enabled = value
-                self:UpdateFrame()
+                self:StyleFrames()
+                if DRT.testing then
+                    self:StopTest()
+                    self:StartTest()
+                end
             end,
             disabled = function ()
                 return not self:IsEnabled() or not self.db.profile.units[unit].enabled
@@ -1567,7 +1574,11 @@ function UF:BuildDiminishingReturnsOptions(unit)
             end,
             set = function(_, value)
                 self.db.profile.units[unit].categories[category].icon = value
-                self:UpdateFrame()
+                self:StyleFrames()
+                if DRT.testing then
+                    self:StopTest()
+                    self:StartTest()
+                end
             end,
             disabled = function ()
                 return not self:IsEnabled() or not self.db.profile.units[unit].enabled
@@ -1587,7 +1598,7 @@ function UF:BuildDiminishingReturnsOptions(unit)
             end,
             set = function (_, value)
                 self.db.profile.units[unit].categories[category].priority = value
-                self:UpdateFrame()
+                self:UpdateFrames()
             end,
             disabled = function ()
                 return not self:IsEnabled() or not self.db.profile.units[unit].enabled
@@ -1677,7 +1688,7 @@ function UF:GetOptions()
                         else
                             self:HideContainers(unit)
                         end
-                        self:UpdateFrame()
+                        self:StyleFrames()
                     end,
                     disabled = function ()
                         return not self:IsEnabled()
@@ -1690,6 +1701,7 @@ function UF:GetOptions()
                     desc = "Restore default settings for this unit.",
                     func = function ()
                         self:ResetUnitSettings(unit)
+                        self:UpdateFrames()
                     end,
                     disabled = function ()
                         return not self:IsEnabled() or not self.db.profile.units[unit].enabled
@@ -1765,19 +1777,18 @@ function UF:GetOptions()
                         local exclude = {
                             "enabled",
                             "anchorTo",
-                            "anchorPoint",
-                            "iconPoint",
+                            "point",
+                            "relativePoint",
                             "offsetX",
                             "offsetY",
-                            "growIcons",
-                            "iconsSpacing",
                             "order",
                         }
                         if fromUnit and toUnit and fromUnit ~= toUnit then
                             self:CopySettings(fromUnit, toUnit, exclude)
                         end
                         copySettingsFrom[unit] = nil
-                        self:UpdateFrame()
+                        self:StyleFrames()
+                        self:UpdateFrames()
                     end,
                     disabled = function ()
                         return not self:IsEnabled() or not self.db.profile.units[unit].enabled or not copySettingsFrom[unit]

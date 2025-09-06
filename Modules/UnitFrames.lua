@@ -806,7 +806,7 @@ function UF:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
     end
 
     for _, unitToken in ipairs(unitTokens) do
-        if self.db.profile.units[unitToken] then
+        if self.db.profile.units[unitToken] and self.db.profile.units[unitToken].enabled then
             local frame = self.categoryFrames[unitToken] and self.categoryFrames[unitToken][drCategory]
             local categoryIcon = self.db.profile.units[unitToken].categories[drCategory].icon
 
@@ -1082,8 +1082,6 @@ function UF:BuildGeneralOptions(unit)
         BOTTOMLEFT = "BOTTOMLEFT",
         BOTTOMRIGHT = "BOTTOMRIGHT",
     }
-
-    local name = string.upper(string.sub(unit, 1, 1)) .. string.sub(unit, 2)
 
     local generalOptions = {
         widget = {
@@ -1660,11 +1658,9 @@ function UF:GetOptions()
     local copySettingsFrom = {}
 
     for unit in pairs(self.db.profile.units) do
-        local name = string.upper(string.sub(unit, 1, 1)) .. string.sub(unit, 2)
-
         options.args[unit] = {
             type = "group",
-            name = name,
+            name = unit,
             order = self.db.profile.units[unit].order,
             childGroups = "tab",
             args = {

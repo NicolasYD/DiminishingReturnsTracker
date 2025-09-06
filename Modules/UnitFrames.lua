@@ -104,28 +104,33 @@ function UF:SetupDB()
     }
 
     local sharedOptions = {
+        -- General settings
         enabled = true,
+        categories = defaultCategories,
+        customIndicator = false,
+
+        -- Icon settings
+        coloredBorder = true,
+        drIndicator = true,
         cropIcons = true,
+        growIcons = "LEFT",
+        iconsSpacing = 5,
+        borderSize = 1,
         frameSize = 30,
         frameLevel = 100,
+        positionLocked = true,
         anchorTo = "UIParent",
         point = "TOPRIGHT",
         relativePoint = "TOPRIGHT",
         offsetX = 0,
         offsetY = 0,
-        growIcons = "LEFT",
-        iconsSpacing = 5,
+
+        -- Cooldown settings
         cooldown = true,
         cooldownReverse = true,
-        cooldownSwipeAlpha = 0.6,
         cooldownEdge = true,
         cooldownNumbersShow = true,
-        categories = defaultCategories,
-        coloredBorder = true,
-        drIndicator = true,
-        borderSize = 1,
-        customIndicator = false,
-        positionLocked = true,
+        cooldownSwipeAlpha = 0.6,
     }
 
 
@@ -233,7 +238,7 @@ end
 
 
 function UF:CreateFrames(unitToken)
-    local function CreateColoredBorder(parent)
+    local function CreateBorderTextures(parent)
         local border = {}
 
         border.left = parent:CreateTexture(nil, "OVERLAY")
@@ -244,6 +249,7 @@ function UF:CreateFrames(unitToken)
         return border
     end
 
+    -- Create the container frame and store the reference
     local container = CreateFrame("Frame", "UFContainer." .. unitToken, UIParent)
     self.unitContainers[unitToken] = container
 
@@ -255,7 +261,7 @@ function UF:CreateFrames(unitToken)
 
     for drCategory, _ in pairs(drCategories) do
 
-        -- Create the category frame
+        -- Create the DR category frame and store the reference
         local frame = CreateFrame("Frame", "UFFrame." .. unitToken .. "." .. drCategory, container)
         self.categoryFrames[unitToken] = self.categoryFrames[unitToken] or {}
         self.categoryFrames[unitToken][drCategory] = frame
@@ -263,10 +269,10 @@ function UF:CreateFrames(unitToken)
         -- Create the icon texture
         frame.icon = frame:CreateTexture(nil, "BACKGROUND")
 
-        -- Create the cooldown spiral
+        -- Create the cooldown frame
         frame.cooldown = CreateFrame("Cooldown", nil, frame, "CooldownFrameTemplate")
 
-        -- Create the border textures
+        -- Create the border frame and textures
         frame.border = CreateFrame("Frame", nil, frame)
         frame.borderTextures = CreateColoredBorder(frame.border)
 
@@ -276,12 +282,12 @@ function UF:CreateFrames(unitToken)
         -- Create the DR indicator texture
         frame.drIndicator.texture = frame.drIndicator:CreateTexture(nil, "OVERLAY")
 
-        -- Create the DR indicator border
-        frame.drIndicator.border = CreateFrame("Frame", nil, frame.drIndicator)
-        frame.drIndicator.borderTextures = CreateColoredBorder(frame.drIndicator.border)
-
         -- Create the DR indicator text label
         frame.drIndicator.text = frame.drIndicator:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+
+        -- Create the DR indicator border
+        frame.drIndicator.border = CreateFrame("Frame", nil, frame.drIndicator)
+        frame.drIndicator.borderTextures = CreateBorderTextures(frame.drIndicator.border)
     end
 
     self:StyleFrames()

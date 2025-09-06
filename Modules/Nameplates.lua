@@ -117,11 +117,11 @@ function NP:SetupDB()
             borderSize = 1,
             frameSize = 20,
             frameLevel = 100,
+            positionLocked = true,
             point = "CENTER",
             relativePoint = "CENTER",
             offsetX = 0,
             offsetY = 15,
-            positionLocked = true,
 
             -- Cooldown settings
             cooldown = true,
@@ -131,6 +131,65 @@ function NP:SetupDB()
             cooldownSwipeAlpha = 0.6,
         }
     })
+end
+
+
+function NP:CreateFrames(nameplateFrame)
+    local nameplateName = nameplateFrame:GetName()
+
+    local function CreateBorderTextures(parent)
+        local border = {}
+
+        border.left = parent:CreateTexture(nil, "OVERLAY")
+        border.right = parent:CreateTexture(nil, "OVERLAY")
+        border.top = parent:CreateTexture(nil, "OVERLAY")
+        border.bottom = parent:CreateTexture(nil, "OVERLAY")
+
+        return border
+    end
+
+    -- Create the container frame and store the reference
+    local container = CreateFrame("Frame", "NPContainer." .. nameplateName, nameplateFrame)
+    self.unitContainers[nameplateFrame] = container
+
+    -- Create the container texture
+    container.texture = container:CreateTexture(nil, "OVERLAY")
+
+    -- Create the container text label
+    container.text = container:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+
+    for drCategory, _ in pairs(drCategories) do
+
+        -- Create the DR category frame and store the reference
+        local frame = CreateFrame("Frame", "NPFrame." .. nameplateName .. "." .. drCategory, container)
+        self.categoryFrames[nameplateFrame] = self.categoryFrames[nameplateFrame] or {}
+        self.categoryFrames[nameplateFrame][drCategory] = frame
+
+        -- Create the icon texture
+        frame.icon = frame:CreateTexture(nil, "BACKGROUND")
+
+        -- Create the cooldown frame
+        frame.cooldown = CreateFrame("Cooldown", nil, frame, "CooldownFrameTemplate")
+
+        -- Create the border frame and textures
+        frame.border = CreateFrame("Frame", nil, frame)
+        frame.borderTextures = CreateBorderTextures(frame.border)
+
+        -- Create the DR indicator frame
+        frame.drIndicator = CreateFrame("Frame", nil, frame)
+
+        -- Create the DR indicator texture
+        frame.drIndicator.texture = frame.drIndicator:CreateTexture(nil, "OVERLAY")
+
+        -- Create the DR indicator text label
+        frame.drIndicator.text = frame.drIndicator:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+
+        -- Create the DR indicator border frame and textures
+        frame.drIndicator.border = CreateFrame("Frame", nil, frame.drIndicator)
+        frame.drIndicator.borderTextures = CreateBorderTextures(frame.drIndicator.border)
+    end
+
+    self:StyleFrames()
 end
 
 
@@ -328,66 +387,6 @@ function NP:ShowContainers(unitToken)
         end
     end
 end
-
-
-function NP:CreateFrames(nameplateFrame)
-    local nameplateName = nameplateFrame:GetName()
-
-    local function CreateBorderTextures(parent)
-        local border = {}
-
-        border.left = parent:CreateTexture(nil, "OVERLAY")
-        border.right = parent:CreateTexture(nil, "OVERLAY")
-        border.top = parent:CreateTexture(nil, "OVERLAY")
-        border.bottom = parent:CreateTexture(nil, "OVERLAY")
-
-        return border
-    end
-
-    -- Create the container frame and store the reference
-    local container = CreateFrame("Frame", "NPContainer." .. nameplateName, nameplateFrame)
-    self.unitContainers[nameplateFrame] = container
-
-    -- Create the container texture
-    container.texture = container:CreateTexture(nil, "OVERLAY")
-
-    -- Create the container text label
-    container.text = container:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-
-    for drCategory, _ in pairs(drCategories) do
-
-        -- Create the DR category frame and store the reference
-        local frame = CreateFrame("Frame", "NPFrame." .. nameplateName .. "." .. drCategory, container)
-        self.categoryFrames[nameplateFrame] = self.categoryFrames[nameplateFrame] or {}
-        self.categoryFrames[nameplateFrame][drCategory] = frame
-
-        -- Create the icon texture
-        frame.icon = frame:CreateTexture(nil, "BACKGROUND")
-
-        -- Create the cooldown frame
-        frame.cooldown = CreateFrame("Cooldown", nil, frame, "CooldownFrameTemplate")
-
-        -- Create the border frame and textures
-        frame.border = CreateFrame("Frame", nil, frame)
-        frame.borderTextures = CreateBorderTextures(frame.border)
-
-        -- Create the DR indicator frame
-        frame.drIndicator = CreateFrame("Frame", nil, frame)
-
-        -- Create the DR indicator texture
-        frame.drIndicator.texture = frame.drIndicator:CreateTexture(nil, "OVERLAY")
-
-        -- Create the DR indicator text label
-        frame.drIndicator.text = frame.drIndicator:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-
-        -- Create the DR indicator border frame and textures
-        frame.drIndicator.border = CreateFrame("Frame", nil, frame.drIndicator)
-        frame.drIndicator.borderTextures = CreateBorderTextures(frame.drIndicator.border)
-    end
-
-    self:StyleFrames()
-end
-
 
 
 function NP:StyleFrames()

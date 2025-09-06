@@ -22,6 +22,8 @@ function NP:OnEnable()
     self.trackedUnits = self.trackedUnits or {}
     self.visibleNameplates = self.visibleNameplates or {}
 
+    self:ShowContainers()
+
     if DRT.testing then
         self:StartTest()
     end
@@ -29,6 +31,8 @@ end
 
 
 function NP:OnDisable()
+    self:HideContainers()
+
     if DRT.testing then
         self:StopTest()
     end
@@ -285,6 +289,42 @@ function NP:COMBAT_LOG_EVENT_UNFILTERED()
     if eventType == "UNIT_DIED" then
         if self.trackedUnits and self.trackedUnits[destGUID] then
             self.trackedUnits[destGUID] = nil
+        end
+    end
+end
+
+
+function NP:HideContainers(unitToken)
+    if not self.unitContainers then return end
+
+    if unitToken then
+        local frame = self.unitContainers[unitToken]
+        if frame and frame.Hide then
+            frame:Hide()
+        end
+    else
+        for unit, frame in pairs(self.unitContainers) do
+            if frame and frame.Hide then
+                frame:Hide()
+            end
+        end
+    end
+end
+
+
+function NP:ShowContainers(unitToken)
+    if not self.unitContainers then return end
+
+    if unitToken then
+        local frame = self.unitContainers[unitToken]
+        if frame and frame.Hide then
+            frame:Show()
+        end
+    else
+        for unit, frame in pairs(self.unitContainers) do
+            if frame and frame.Show then
+                frame:Show()
+            end
         end
     end
 end

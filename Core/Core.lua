@@ -15,7 +15,7 @@ function DRT:OnInitialize()
                     enabled = true,
                 },
 				NP = {
-                    enabled = true,
+                    enabled = false,
                 },
             }
         }

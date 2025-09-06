@@ -7,30 +7,28 @@ local drCategories = DRList:GetCategories()
 drCategories["taunt"] = nil
 
 function UF:OnInitialize()
-    self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-    self:RegisterEvent("PLAYER_TARGET_CHANGED")
-    self:RegisterEvent("GROUP_ROSTER_UPDATE")
 
-    if not self.db then
-        self:SetupDB()
-    end
 end
 
 
 function UF:OnEnable()
-    self:ShowContainers()
+    self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+    self:RegisterEvent("PLAYER_TARGET_CHANGED")
+    self:RegisterEvent("GROUP_ROSTER_UPDATE")
 
     self.unitContainers = self.unitContainers or {}
     self.categoryFrames = self.categoryFrames or {}
     self.trackedUnits = self.trackedUnits or {}
 
+    -- Create category frames for all unit tokens
     for unitToken in pairs(self.db.profile.units) do
         self.categoryFrames[unitToken] = self.categoryFrames[unitToken] or {}
         if not self.unitContainers[unitToken] then
             self:CreateFrames(unitToken)
         end
     end
-    self:StyleFrames()
+
+    self:ShowContainers()
 
     if DRT.testing then
         self:StartTest()
@@ -39,10 +37,11 @@ end
 
 
 function UF:OnDisable()
+    self:HideContainers()
+
     if DRT.testing then
         self:StopTest()
     end
-    self:HideContainers()
 end
 
 

@@ -232,96 +232,307 @@ function UF:SetupDB()
 end
 
 
-function UF:CreateFrame(unit, category)
-    local function CreateColoredBorder(parent, color, size)
-        size = size or 1
-        color = color or {1, 1, 1, 1}
-        local borders = {}
+function UF:CreateFrames(unitToken)
+    local function CreateColoredBorder(parent)
+        local border = {}
 
-        borders.top = parent:CreateTexture(nil, "OVERLAY")
-        borders.top:SetColorTexture(unpack(color))
-        borders.top:SetPoint("TOPLEFT", -size, size)
-        borders.top:SetPoint("TOPRIGHT", size, size)
-        borders.top:SetHeight(size)
+        border.left = parent:CreateTexture(nil, "OVERLAY")
+        border.right = parent:CreateTexture(nil, "OVERLAY")
+        border.top = parent:CreateTexture(nil, "OVERLAY")
+        border.bottom = parent:CreateTexture(nil, "OVERLAY")
 
-        borders.bottom = parent:CreateTexture(nil, "OVERLAY")
-        borders.bottom:SetColorTexture(unpack(color))
-        borders.bottom:SetPoint("BOTTOMLEFT", -size, -size)
-        borders.bottom:SetPoint("BOTTOMRIGHT", size, -size)
-        borders.bottom:SetHeight(size)
-
-        borders.left = parent:CreateTexture(nil, "OVERLAY")
-        borders.left:SetColorTexture(unpack(color))
-        borders.left:SetPoint("TOPLEFT", -size, size)
-        borders.left:SetPoint("BOTTOMLEFT", -size, -size)
-        borders.left:SetWidth(size)
-
-        borders.right = parent:CreateTexture(nil, "OVERLAY")
-        borders.right:SetColorTexture(unpack(color))
-        borders.right:SetPoint("TOPRIGHT", size, size)
-        borders.right:SetPoint("BOTTOMRIGHT", size, -size)
-        borders.right:SetWidth(size)
-
-        return borders
+        return border
     end
 
-
-    -- Create the container frame for this unit if it doesn't exist
-    if not self.unitContainers[unit] then
-        local container = CreateFrame("Frame", "DRTContainer." .. unit, UIParent)
-        self.unitContainers[unit] = container
-    end
-
-    local container = self.unitContainers[unit]
+    local container = CreateFrame("Frame", "UFContainer." .. unitToken, UIParent)
+    self.unitContainers[unitToken] = container
 
     -- Create the container texture
     container.texture = container:CreateTexture(nil, "OVERLAY")
-    container.texture:SetAllPoints()
 
     -- Create the container text label
     container.text = container:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    container.text:SetPoint("CENTER", container, "CENTER", 0, 0)
-    container.text:SetDrawLayer("OVERLAY", 2)
 
-    -- Create the category frame
-    local frame = CreateFrame("Frame", "DRTFrame." .. unit .. "." .. category, container)
-    self.frames[unit][category] = frame
+    for drCategory, _ in pairs(drCategories) do
 
-    -- Create the icon texture
-    frame.icon = frame:CreateTexture(nil, "BACKGROUND")
-    frame.icon:SetAllPoints()
+        -- Create the category frame
+        local frame = CreateFrame("Frame", "UFFrame." .. unitToken .. "." .. drCategory, container)
+        self.categoryFrames[unitToken] = self.categoryFrames[unitToken] or {}
+        self.categoryFrames[unitToken][drCategory] = frame
 
-    -- Create the cooldown spiral
-    frame.cooldown = CreateFrame("Cooldown", nil, frame, "CooldownFrameTemplate")
-    frame.cooldown:SetAllPoints()
+        -- Create the icon texture
+        frame.icon = frame:CreateTexture(nil, "BACKGROUND")
 
-    -- Create the border textures
-    frame.border = CreateFrame("Frame", nil, frame)
-    frame.border:SetAllPoints()
-    frame.border:SetFrameLevel(frame.cooldown:GetFrameLevel() + 1)
-    frame.borderTextures = CreateColoredBorder(frame.border)
+        -- Create the cooldown spiral
+        frame.cooldown = CreateFrame("Cooldown", nil, frame, "CooldownFrameTemplate")
 
-    -- Create the DR indicator frame
-    frame.drIndicator = CreateFrame("Frame", nil, frame)
-    frame.drIndicator:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
-    frame.drIndicator:SetFrameLevel(frame.border:GetFrameLevel() + 1)
+        -- Create the border textures
+        frame.border = CreateFrame("Frame", nil, frame)
+        frame.borderTextures = CreateColoredBorder(frame.border)
 
-    -- Create the DR indicator texture
-    frame.drIndicator.texture = frame.drIndicator:CreateTexture(nil, "OVERLAY")
-    frame.drIndicator.texture:SetAllPoints()
-    frame.drIndicator.texture:SetDrawLayer("OVERLAY", 1)
-    frame.drIndicator.texture:SetColorTexture(0, 0, 0, 1)
+        -- Create the DR indicator frame
+        frame.drIndicator = CreateFrame("Frame", nil, frame)
 
-    -- Create the DR indicator border
-    frame.drIndicator.border = CreateFrame("Frame", nil, frame.drIndicator)
-    frame.drIndicator.border:SetAllPoints()
-    frame.drIndicator.border:SetFrameLevel(frame.drIndicator:GetFrameLevel() + 1)
-    frame.drIndicator.borderTextures = CreateColoredBorder(frame.drIndicator.border)
+        -- Create the DR indicator texture
+        frame.drIndicator.texture = frame.drIndicator:CreateTexture(nil, "OVERLAY")
 
-    -- Create the DR indicator text label
-    frame.drIndicator.text = frame.drIndicator:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    frame.drIndicator.text:SetPoint("CENTER", frame.drIndicator, "CENTER", 0, 0)
-    frame.drIndicator.text:SetDrawLayer("OVERLAY", 2)
+        -- Create the DR indicator border
+        frame.drIndicator.border = CreateFrame("Frame", nil, frame.drIndicator)
+        frame.drIndicator.borderTextures = CreateColoredBorder(frame.drIndicator.border)
+
+        -- Create the DR indicator text label
+        frame.drIndicator.text = frame.drIndicator:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    end
+
+    self:StyleFrames()
+end
+
+
+function UF:StyleFrames()
+    for unitToken, container in pairs(self.unitContainers) do
+        local settings = self.db.profile.units[unitToken]
+
+        local enabledFrameCount = 0
+        for _, drSettings in pairs(settings.categories) do
+            if drSettings.enabled then
+                enabledFrameCount = enabledFrameCount + 1
+            end
+        end
+
+        self:MoveFrame(container, unitToken, function (f)
+            ACR:NotifyChange("DRT") -- Update values in options
+        end)
+
+        -- Container styling
+        container:ClearAllPoints()
+        container:SetPoint(settings.point, settings.anchorTo, settings.relativePoint, settings.offsetX, settings.offsetY)
+        if settings.growIcons == "LEFT" or settings.growIcons == "RIGHT" then
+            container:SetHeight(settings.frameSize)
+            container:SetWidth(enabledFrameCount * settings.frameSize + math.max(0, enabledFrameCount - 1) * settings.iconsSpacing)
+        elseif settings.growIcons == "UP" or settings.growIcons == "DOWN" then
+            container:SetHeight(enabledFrameCount * settings.frameSize + math.max(0, enabledFrameCount - 1) * settings.iconsSpacing)
+            container:SetWidth(settings.frameSize)
+        end
+
+        -- Container texture styling
+        container.texture:ClearAllPoints()
+        container.texture:SetAllPoints()
+        if settings.positionLocked then
+            container.texture:SetColorTexture(0, 0, 0, 0)
+        else
+            container.texture:SetDrawLayer("OVERLAY", 1)
+            container.texture:SetColorTexture(0, 0, 0, 0.4)
+        end
+
+
+        -- Container text label styling
+        container.text:ClearAllPoints()
+        container.text:SetAllPoints()
+        if settings.positionLocked then
+            container.texture:SetColorTexture(0, 0, 0, 0) -- Alpha = 0
+            container.text:SetText("")
+        else
+            container.texture:SetColorTexture(0, 0, 0, 0.4) -- Alpha = 0.4
+            container.text:SetDrawLayer("OVERLAY", 2)
+            if settings.growIcons == "LEFT" or settings.growIcons == "RIGHT" then
+                container.text:SetText("DRT " .. unitToken)
+            elseif settings.growIcons == "UP" or settings.growIcons == "DOWN" then
+                container.text:SetText("D\nR\nT\n\n")
+            end
+        end
+
+        for drCategory, _ in pairs(drCategories) do
+            local frame = self.categoryFrames[unitToken][drCategory]
+
+            -- DR category frame styling
+            frame:SetSize(settings.frameSize, settings.frameSize)
+            frame:SetFrameLevel(settings.frameLevel)
+
+            -- Icon texture styling
+            frame.icon:ClearAllPoints()
+            frame.icon:SetAllPoints()
+            if settings.cropIcons then
+                frame.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+            else
+                frame.icon:SetTexCoord(0, 1, 0, 1)
+            end
+
+            -- Cooldown frame styling
+            frame.cooldown:ClearAllPoints()
+            frame.cooldown:SetAllPoints()
+            frame.cooldown:SetDrawBling(false)
+            frame.cooldown:SetDrawSwipe(settings.cooldown)
+            frame.cooldown:SetReverse(settings.cooldownReverse)
+            frame.cooldown:SetSwipeColor(0, 0, 0, settings.cooldownSwipeAlpha)
+            frame.cooldown:SetDrawEdge(settings.cooldown and settings.cooldownEdge)
+            frame.cooldown:SetHideCountdownNumbers(not settings.cooldownNumbersShow)
+
+            -- Border frame styling
+            frame.border:ClearAllPoints()
+            frame.border:SetAllPoints()
+            frame.border:SetFrameLevel(frame.cooldown:GetFrameLevel() + 1)
+            if settings.coloredBorder then
+                frame.border:SetAlpha(1)
+            else
+                frame.border:SetAlpha(0)
+            end
+
+            for position, texture in pairs(frame.borderTextures) do
+                local size = settings.borderSize
+
+                if position == "left" then
+                    texture:ClearAllPoints()
+                    texture:SetPoint("TOPLEFT", -size, size)
+                    texture:SetPoint("BOTTOMLEFT", -size, -size)
+                    texture:SetWidth(size)
+
+                elseif position == "right" then
+                    texture:ClearAllPoints()
+                    texture:SetPoint("TOPRIGHT", size, size)
+                    texture:SetPoint("BOTTOMRIGHT", size, -size)
+                    texture:SetWidth(size)
+
+                elseif position == "top" then
+                    texture:ClearAllPoints()
+                    texture:SetPoint("TOPLEFT", -size, size)
+                    texture:SetPoint("TOPRIGHT", size, size)
+                    texture:SetHeight(size)
+
+                elseif position == "bottom" then
+                    texture:ClearAllPoints()
+                    texture:SetPoint("BOTTOMLEFT", -size, -size)
+                    texture:SetPoint("BOTTOMRIGHT", size, -size)
+                    texture:SetHeight(size)
+                end
+            end
+
+            -- DR indicator frame styling
+            frame.drIndicator:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+            frame.drIndicator:SetSize(0.3 * settings.frameSize, 0.3 * settings.frameSize)
+            if settings.drIndicator then
+                frame.drIndicator:SetAlpha(1)
+            else
+                frame.drIndicator:SetAlpha(0)
+            end
+
+            -- DR indicator texture styling
+            frame.drIndicator.texture:SetAllPoints()
+            frame.drIndicator.texture:SetDrawLayer("OVERLAY", 1)
+            frame.drIndicator.texture:SetColorTexture(0, 0, 0, 1)
+
+            -- DR indicator text label styling
+            local fontSize = 0.3 * settings.frameSize
+            local fontPath, _, fontFlags = frame.drIndicator.text:GetFont()
+
+            frame.drIndicator.text:SetPoint("CENTER", frame.drIndicator, "CENTER", 0, 0)
+            frame.drIndicator.text:SetDrawLayer("OVERLAY", 2)
+            frame.drIndicator.text:SetFont(fontPath, fontSize, fontFlags)
+
+            -- DR indicator border frame styling
+            frame.drIndicator.border:ClearAllPoints()
+            frame.drIndicator.border:SetAllPoints()
+            frame.drIndicator.border:SetFrameLevel(frame.drIndicator:GetFrameLevel() + 1)
+            if settings.coloredBorder then
+                frame.drIndicator.border:SetAlpha(1)
+            else
+                frame.drIndicator.border:SetAlpha(0)
+            end
+
+            for position, texture in pairs(frame.drIndicator.borderTextures) do
+                local size = settings.borderSize
+
+                if position == "left" then
+                    texture:ClearAllPoints()
+                    texture:SetPoint("TOPLEFT", -size, size)
+                    texture:SetPoint("BOTTOMLEFT", -size, -size)
+                    texture:SetWidth(size)
+
+                elseif position == "right" then
+                    texture:ClearAllPoints()
+                    texture:SetPoint("TOPRIGHT", size, size)
+                    texture:SetPoint("BOTTOMRIGHT", size, -size)
+                    texture:SetWidth(size)
+
+                elseif position == "top" then
+                    texture:ClearAllPoints()
+                    texture:SetPoint("TOPLEFT", -size, size)
+                    texture:SetPoint("TOPRIGHT", size, size)
+                    texture:SetHeight(size)
+
+                elseif position == "bottom" then
+                    texture:ClearAllPoints()
+                    texture:SetPoint("BOTTOMLEFT", -size, -size)
+                    texture:SetPoint("BOTTOMRIGHT", size, -size)
+                    texture:SetHeight(size)
+                end
+            end
+        end
+    end
+end
+
+
+function UF:UpdateFrames()
+    if not self.categoryFrames then
+        return
+    end
+
+    local growDirection = {
+        LEFT = {relativePoint = "RIGHT", point = "LEFT"},
+        RIGHT = {relativePoint = "LEFT", point = "RIGHT"},
+        UP = {relativePoint = "BOTTOM", point = "TOP"},
+        DOWN = {relativePoint = "TOP", point = "BOTTOM"},
+    }
+
+    for unitToken, categories in pairs(self.categoryFrames) do
+        local settings = self.db.profile.units[unitToken]
+        local container = self.unitContainers[unitToken]
+        local activeFrames = {}
+        local enabledFrameCount = 0
+
+        for drCategory, frame in pairs(categories) do
+            frame.enabled = self.db.profile.units[unitToken].categories[drCategory].enabled
+
+            if frame.enabled then
+                enabledFrameCount = enabledFrameCount + 1
+            end
+
+            if frame.active and frame.enabled then
+                table.insert(activeFrames, {
+                    category = drCategory,
+                    frame = frame,
+                    priority = self.db.profile.units[unitToken].categories[drCategory].priority,
+                })
+            else
+                frame:SetAlpha(0)
+            end
+        end
+
+        table.sort(activeFrames, function(a, b)
+            return a.priority > b.priority
+        end)
+
+        local lastFrame
+        for _, entry in ipairs(activeFrames) do
+            local frame = entry.frame
+            local direction = settings.growIcons
+            local relativePoint = growDirection[direction].relativePoint
+            local point = growDirection[direction].point
+            local spacing = settings.iconsSpacing
+            frame:ClearAllPoints()
+            if not lastFrame then
+                frame:SetPoint(relativePoint, container)
+            else
+                frame:SetPoint(
+                    relativePoint,
+                    lastFrame,
+                    point,
+                    (point == "RIGHT" and spacing) or (point == "LEFT" and -spacing) or 0,
+                    (point == "TOP" and spacing) or (point == "BOTTOM" and -spacing) or 0
+                )
+            end
+            lastFrame = frame
+        end
+    end
 end
 
 
@@ -660,148 +871,7 @@ function UF:ShowDRIcons(drCategory, unitGUID)
         end
     end
 
-    self:UpdateFrame()
-end
-
-
-function UF:UpdateFrame()
-    if not self.frames then
-        return
-    end
-
-    local growDirection = {
-        Left = {iconPoint = "RIGHT", anchorPoint = "LEFT"},
-        Right = {iconPoint = "LEFT", anchorPoint = "RIGHT"},
-        Up = {iconPoint = "BOTTOM", anchorPoint = "TOP"},
-        Down = {iconPoint = "TOP", anchorPoint = "BOTTOM"},
-    }
-
-    for unit in pairs(self.frames) do
-        local activeFrames = {}
-        local enabledFrameCount = 0
-
-        for category, frame in pairs(self.frames[unit]) do
-            frame.enabled = self.db.profile.units[unit].categories[category].enabled
-
-            if frame.enabled then
-                enabledFrameCount = enabledFrameCount + 1
-            end
-
-            if frame.active and frame.enabled then
-                table.insert(activeFrames, {
-                    category = category,
-                    frame = frame,
-                    priority = self.db.profile.units[unit].categories[category].priority,
-                })
-            else
-                frame:SetAlpha(0)
-            end
-        end
-
-        table.sort(activeFrames, function(a, b)
-            return a.priority > b.priority
-        end)
-
-        local lastFrame
-        local settings = self.db.profile.units[unit]
-
-        local container = self.unitContainers[unit]
-        container:ClearAllPoints()
-        container:SetPoint(settings.iconPoint, settings.anchorTo, settings.anchorPoint, settings.offsetX, settings.offsetY)
-        container:SetHeight(settings.frameSize)
-        container:SetWidth(enabledFrameCount * settings.frameSize + math.max(0, enabledFrameCount - 1) * settings.iconsSpacing)
-
-        self:MoveFrame(container, unit, function (f)
-            ACR:NotifyChange("DRT") -- Update values in options
-        end)
-
-        if self.db.profile.units[unit].lockPosition then
-            container.texture:SetColorTexture(0, 0, 0, 0) -- Alpha = 0
-            container.text:SetText("")
-        else
-            container.texture:SetColorTexture(0, 0, 0, 0.4) -- Alpha = 0.4
-            container.text:SetText("DRT " .. unit)
-        end
-
-        for _, entry in ipairs(activeFrames) do
-            local frame = entry.frame
-            frame:SetSize(settings.frameSize, settings.frameSize)
-            frame:ClearAllPoints()
-
-            local direction = settings.growIcons
-            local iconPoint = growDirection[direction].iconPoint
-            local anchorPoint = growDirection[direction].anchorPoint
-            local spacing = settings.iconsSpacing
-            if not lastFrame then
-                frame:SetPoint(iconPoint, self.unitContainers[unit], iconPoint)
-            else
-
-                frame:SetPoint(
-                    iconPoint,
-                    lastFrame,
-                    anchorPoint,
-                    (anchorPoint == "RIGHT" and spacing) or (anchorPoint == "LEFT" and -spacing) or 0,
-                    (anchorPoint == "TOP" and spacing) or (anchorPoint == "BOTTOM" and -spacing) or 0
-                )
-            end
-
-            lastFrame = frame
-
-            if settings.cropIcons then
-                frame.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-            else
-                frame.icon:SetTexCoord(0, 1, 0, 1)
-            end
-
-            frame.cooldown:SetDrawBling(false)
-            frame.cooldown:SetDrawSwipe(settings.cooldown)
-            frame.cooldown:SetReverse(settings.cooldownReverse)
-            frame.cooldown:SetSwipeColor(0, 0, 0, settings.cooldownSwipeAlpha)
-            frame.cooldown:SetDrawEdge(settings.cooldown and settings.cooldownEdge)
-
-            if settings.customIndicator then
-                -- Add settings for custom indicator
-            else
-                local size = 0.3 * settings.frameSize
-                local fontPath, fontSize, fontFlags = frame.drIndicator.text:GetFont()
-
-                frame.drIndicator:SetSize(size, size)
-                frame.drIndicator.text:SetFont(fontPath, size, fontFlags)
-            end
-
-            if settings.cooldownNumbers then
-                frame.cooldown:SetHideCountdownNumbers(false)
-            else
-                frame.cooldown:SetHideCountdownNumbers(true)
-            end
-
-            if settings.drIndicator then
-                frame.drIndicator:SetAlpha(1)
-            else
-                frame.drIndicator:SetAlpha(0)
-            end
-
-            local borderSize = self.db.profile.units[unit].borderSize
-            for name, tex in pairs(frame.borderTextures) do
-                if name == "top" or name == "bottom" then
-                    tex:SetHeight(borderSize)
-                elseif name == "left" or name == "right" then
-                    tex:SetWidth(borderSize)
-                end
-                if settings.coloredBorder then
-                    tex:SetAlpha(1)
-                else
-                    tex:SetAlpha(0)
-                end
-            end
-
-            if settings.enabled then
-                frame:Show()
-            else
-                frame:Hide()
-            end
-        end
-    end
+    self:UpdateFrames()
 end
 
 

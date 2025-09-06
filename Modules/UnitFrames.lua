@@ -3,6 +3,8 @@ local ACR = LibStub("AceConfigRegistry-3.0")
 local UF = DRT:NewModule("UF", "AceEvent-3.0")
 
 local DRList = LibStub("DRList-1.0")
+local drCategories = DRList:GetCategories()
+drCategories["taunt"] = nil
 
 function UF:OnInitialize()
     self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
@@ -16,9 +18,6 @@ end
 
 
 function UF:OnEnable()
-    local drCategories = DRList:GetCategories()
-    drCategories["taunt"] = nil
-
     self:ShowContainers()
 
     self.unitContainers = self.unitContainers or {}
@@ -834,8 +833,6 @@ function UF:StartTest()
 
     local function TestIcons()
         local units = self.db.profile.units
-        local drCategories = DRList:GetCategories()
-        drCategories["taunt"] = nil
         local spellList = DRList:GetSpells()
         local reset = DRList:GetResetTime("stun")
 
@@ -1431,8 +1428,6 @@ function UF:BuildDiminishingReturnsOptions(unit)
         },
     }
 
-    local drCategories = DRList:GetCategories()
-    drCategories["taunt"] = nil
     local count = 0
     for _ in pairs(drCategories) do
         count = count + 1
@@ -1583,8 +1578,6 @@ function UF:GetOptions()
         }
     }
 
-    local drCategories = DRList:GetCategories()
-    drCategories["taunt"] = nil
     local count = 0
     for _ in pairs(drCategories) do
         count = count + 1

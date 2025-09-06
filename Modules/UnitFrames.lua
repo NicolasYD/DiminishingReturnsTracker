@@ -274,7 +274,7 @@ function UF:CreateFrames(unitToken)
 
         -- Create the border frame and textures
         frame.border = CreateFrame("Frame", nil, frame)
-        frame.borderTextures = CreateColoredBorder(frame.border)
+        frame.borderTextures = CreateBorderTextures(frame.border)
 
         -- Create the DR indicator frame
         frame.drIndicator = CreateFrame("Frame", nil, frame)
@@ -335,15 +335,13 @@ function UF:StyleFrames()
         container.text:ClearAllPoints()
         container.text:SetAllPoints()
         if settings.positionLocked then
-            container.texture:SetColorTexture(0, 0, 0, 0) -- Alpha = 0
             container.text:SetText("")
         else
-            container.texture:SetColorTexture(0, 0, 0, 0.4) -- Alpha = 0.4
             container.text:SetDrawLayer("OVERLAY", 2)
             if settings.growIcons == "LEFT" or settings.growIcons == "RIGHT" then
                 container.text:SetText("DRT " .. unitToken)
             elseif settings.growIcons == "UP" or settings.growIcons == "DOWN" then
-                container.text:SetText("D\nR\nT\n\n")
+                container.text:SetText("DRT\n\n" .. unitToken)
             end
         end
 

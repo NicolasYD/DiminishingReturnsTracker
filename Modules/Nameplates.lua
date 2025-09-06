@@ -193,202 +193,6 @@ function NP:CreateFrames(nameplateFrame)
 end
 
 
-function NP:NAME_PLATE_UNIT_ADDED(_, nameplateUnit)
-    local unitGUID = UnitGUID(nameplateUnit)
-    local nameplateFrame = C_NamePlate.GetNamePlateForUnit(nameplateUnit)
-
-    if not unitGUID or not nameplateFrame then return end
-
-    self.visibleNameplates[nameplateFrame] = self.visibleNameplates[nameplateFrame] or {}
-    self.visibleNameplates[nameplateFrame].unitGUID = unitGUID
-
-    -- Create DR frames for nameplates if they don't exist yet
-    if not self.unitContainers[nameplateFrame] then
-        self:CreateFrames(nameplateFrame)
-    end
-
-    self.unitContainers[nameplateFrame]:SetAlpha(1)
-
-    for drCategory, _ in pairs(drCategories) do
-        self:StartOrUpdateDRTimer(drCategory, unitGUID)
-    end
-end
-
-
-function NP:NAME_PLATE_UNIT_REMOVED(_, nameplateUnit)
-    local nameplateFrame = C_NamePlate.GetNamePlateForUnit(nameplateUnit)
-
-    if not nameplateFrame then return end
-
-    self.visibleNameplates[nameplateFrame] = nil
-
-    self:ResetFrame(nameplateFrame)
-end
-
-
-function NP:COMBAT_LOG_EVENT_UNFILTERED()
-    if DRT.testing then return end
-
-
-    local function GetDebuffDuration(unitToken, spellID)
-        if not UnitExists(unitToken) then return nil end
-
-        for index = 1, 255 do
-            local aura = C_UnitAuras.GetDebuffDataByIndex(unitToken, index, "HARMFUL")
-            if not aura then
-                break
-            end
-
-            if aura.spellId == spellID then
-                local timeLeft = aura.expirationTime and (aura.expirationTime - GetTime()) or 0
-                return aura.duration, aura.expirationTime, timeLeft
-            end
-        end
-
-        return nil
-    end
-
-
-    local _, eventType, _, _, _, _, _, destGUID, _, destFlags, _, spellID, _, _, auraType = CombatLogGetCurrentEventInfo()
-
-    -- Return if affected unit is excluded from tracking
-    local isFriendly = bit.band(destFlags, COMBATLOG_OBJECT_REACTION_FRIENDLY) > 0
-    local isNeutral = bit.band(destFlags, COMBATLOG_OBJECT_REACTION_NEUTRAL) > 0
-    local isHostile  = bit.band(destFlags, COMBATLOG_OBJECT_REACTION_HOSTILE) > 0
-    local isNPC = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_NPC) > 0
-    local isPet = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_PET) > 0
-    local isGuardian = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_GUARDIAN) > 0
-    local isObject = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_OBJECT) > 0
-
-    local settings = self.db.profile
-    if settings.excludeFriendly and isFriendly then return end
-    if settings.excludeNeutral and isNeutral then return end
-    if settings.excludeHostile and isHostile then return end
-    if settings.excludeNPCs and isNPC then return end
-    if settings.excludePets and isPet then return end
-    if settings.excludeGuardians and isGuardian then return end
-    if settings.excludeObjects and isObject then return end
-
-    -- Check all debuffs found in the combat log
-    if auraType == "DEBUFF" then
-        -- Get the DR category or exit immediately if current debuff doesn't have a DR
-        local drCategory, sharedCategories = DRList:GetCategoryBySpellID(spellID)
-        if not drCategory then return end
-
-        -- Check if unit that got the debuff is a player
-        local isPlayer = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_PLAYER) ~= 0
-        if not isPlayer and not DRList:IsPvECategory(drCategory) then return end
-
-        self.trackedUnits[destGUID] = self.trackedUnits[destGUID] or {}
-        self.trackedUnits[destGUID][drCategory] = self.trackedUnits[destGUID][drCategory] or {}
-
-        local data = self.trackedUnits[destGUID][drCategory]
-        local currentTime = GetTime()
-
-        if eventType == "SPELL_AURA_APPLIED" or eventType == "SPELL_AURA_REFRESH" then
-            -- Set how many times the DR category has been applied so far
-            if data.diminished == nil or currentTime >= (data.expirationTime or 0) then -- is nil or DR expired
-                local duration = 1
-                data.diminished = DRList:NextDR(duration, drCategory)
-            else
-                data.diminished = DRList:NextDR(data.diminished, drCategory)
-            end
-
-            local debuffDuration
-            for i= 1, 40 do
-                local unitToken = "nameplate" .. i
-                debuffDuration, _, _ = GetDebuffDuration(unitToken, spellID)
-                if debuffDuration then break end
-            end
-
-            data.startTime = currentTime
-            if isPlayer then
-                data.resetTime = DRList:GetResetTime(drCategory) + (debuffDuration or 0)
-            else
-                data.resetTime = DRList:GetResetTime("npc") + (debuffDuration or 0)
-            end
-            data.expirationTime = data.startTime + data.resetTime
-            -- Trigger main DR category
-            self:StartOrUpdateDRTimer(drCategory, destGUID, spellID)
-
-            -- Trigger any shared DR categories
-            if sharedCategories then
-                for i = 1, #sharedCategories do
-                    if sharedCategories[i] ~= drCategory then
-                        self:StartOrUpdateDRTimer(sharedCategories[i], destGUID, spellID)
-                    end
-                end
-            end
-        end
-
-        -- The debuff has faded or refreshed, DR timer starts
-        if eventType == "SPELL_AURA_REMOVED" then
-            data.startTime = currentTime
-            if isPlayer then
-                data.resetTime = DRList:GetResetTime(drCategory)
-            else
-                data.resetTime = DRList:GetResetTime("npc")
-            end
-            data.expirationTime = data.startTime + data.resetTime
-
-            -- Trigger main DR category
-            self:StartOrUpdateDRTimer(drCategory, destGUID, spellID)
-
-            -- Trigger any shared DR categories
-            if sharedCategories then
-                for i = 1, #sharedCategories do
-                    if sharedCategories[i] ~= drCategory then
-                        self:StartOrUpdateDRTimer(sharedCategories[i], destGUID, spellID)
-                    end
-                end
-            end
-        end
-    end
-
-    if eventType == "UNIT_DIED" then
-        if self.trackedUnits and self.trackedUnits[destGUID] then
-            self.trackedUnits[destGUID] = nil
-        end
-    end
-end
-
-
-function NP:HideContainers(unitToken)
-    if not self.unitContainers then return end
-
-    if unitToken then
-        local frame = self.unitContainers[unitToken]
-        if frame and frame.Hide then
-            frame:Hide()
-        end
-    else
-        for unit, frame in pairs(self.unitContainers) do
-            if frame and frame.Hide then
-                frame:Hide()
-            end
-        end
-    end
-end
-
-
-function NP:ShowContainers(unitToken)
-    if not self.unitContainers then return end
-
-    if unitToken then
-        local frame = self.unitContainers[unitToken]
-        if frame and frame.Hide then
-            frame:Show()
-        end
-    else
-        for unit, frame in pairs(self.unitContainers) do
-            if frame and frame.Show then
-                frame:Show()
-            end
-        end
-    end
-end
-
-
 function NP:StyleFrames()
     local settings = self.db.profile
 
@@ -631,6 +435,205 @@ function NP:UpdateFrames()
         end
     end
 end
+
+
+function NP:NAME_PLATE_UNIT_ADDED(_, nameplateUnit)
+    local unitGUID = UnitGUID(nameplateUnit)
+    local nameplateFrame = C_NamePlate.GetNamePlateForUnit(nameplateUnit)
+
+    if not unitGUID or not nameplateFrame then return end
+
+    self.visibleNameplates[nameplateFrame] = self.visibleNameplates[nameplateFrame] or {}
+    self.visibleNameplates[nameplateFrame].unitGUID = unitGUID
+
+    -- Create DR frames for nameplates if they don't exist yet
+    if not self.unitContainers[nameplateFrame] then
+        self:CreateFrames(nameplateFrame)
+    end
+
+    self.unitContainers[nameplateFrame]:SetAlpha(1)
+
+    for drCategory, _ in pairs(drCategories) do
+        self:StartOrUpdateDRTimer(drCategory, unitGUID)
+    end
+end
+
+
+function NP:NAME_PLATE_UNIT_REMOVED(_, nameplateUnit)
+    local nameplateFrame = C_NamePlate.GetNamePlateForUnit(nameplateUnit)
+
+    if not nameplateFrame then return end
+
+    self.visibleNameplates[nameplateFrame] = nil
+
+    self:ResetFrame(nameplateFrame)
+end
+
+
+function NP:COMBAT_LOG_EVENT_UNFILTERED()
+    if DRT.testing then return end
+
+
+    local function GetDebuffDuration(unitToken, spellID)
+        if not UnitExists(unitToken) then return nil end
+
+        for index = 1, 255 do
+            local aura = C_UnitAuras.GetDebuffDataByIndex(unitToken, index, "HARMFUL")
+            if not aura then
+                break
+            end
+
+            if aura.spellId == spellID then
+                local timeLeft = aura.expirationTime and (aura.expirationTime - GetTime()) or 0
+                return aura.duration, aura.expirationTime, timeLeft
+            end
+        end
+
+        return nil
+    end
+
+
+    local _, eventType, _, _, _, _, _, destGUID, _, destFlags, _, spellID, _, _, auraType = CombatLogGetCurrentEventInfo()
+
+    -- Return if affected unit is excluded from tracking
+    local isFriendly = bit.band(destFlags, COMBATLOG_OBJECT_REACTION_FRIENDLY) > 0
+    local isNeutral = bit.band(destFlags, COMBATLOG_OBJECT_REACTION_NEUTRAL) > 0
+    local isHostile  = bit.band(destFlags, COMBATLOG_OBJECT_REACTION_HOSTILE) > 0
+    local isNPC = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_NPC) > 0
+    local isPet = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_PET) > 0
+    local isGuardian = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_GUARDIAN) > 0
+    local isObject = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_OBJECT) > 0
+
+    local settings = self.db.profile
+    if settings.excludeFriendly and isFriendly then return end
+    if settings.excludeNeutral and isNeutral then return end
+    if settings.excludeHostile and isHostile then return end
+    if settings.excludeNPCs and isNPC then return end
+    if settings.excludePets and isPet then return end
+    if settings.excludeGuardians and isGuardian then return end
+    if settings.excludeObjects and isObject then return end
+
+    -- Check all debuffs found in the combat log
+    if auraType == "DEBUFF" then
+        -- Get the DR category or exit immediately if current debuff doesn't have a DR
+        local drCategory, sharedCategories = DRList:GetCategoryBySpellID(spellID)
+        if not drCategory then return end
+
+        -- Check if unit that got the debuff is a player
+        local isPlayer = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_PLAYER) ~= 0
+        if not isPlayer and not DRList:IsPvECategory(drCategory) then return end
+
+        self.trackedUnits[destGUID] = self.trackedUnits[destGUID] or {}
+        self.trackedUnits[destGUID][drCategory] = self.trackedUnits[destGUID][drCategory] or {}
+
+        local data = self.trackedUnits[destGUID][drCategory]
+        local currentTime = GetTime()
+
+        if eventType == "SPELL_AURA_APPLIED" or eventType == "SPELL_AURA_REFRESH" then
+            -- Set how many times the DR category has been applied so far
+            if data.diminished == nil or currentTime >= (data.expirationTime or 0) then -- is nil or DR expired
+                local duration = 1
+                data.diminished = DRList:NextDR(duration, drCategory)
+            else
+                data.diminished = DRList:NextDR(data.diminished, drCategory)
+            end
+
+            local debuffDuration
+            for i= 1, 40 do
+                local unitToken = "nameplate" .. i
+                debuffDuration, _, _ = GetDebuffDuration(unitToken, spellID)
+                if debuffDuration then break end
+            end
+
+            data.startTime = currentTime
+            if isPlayer then
+                data.resetTime = DRList:GetResetTime(drCategory) + (debuffDuration or 0)
+            else
+                data.resetTime = DRList:GetResetTime("npc") + (debuffDuration or 0)
+            end
+            data.expirationTime = data.startTime + data.resetTime
+            -- Trigger main DR category
+            self:StartOrUpdateDRTimer(drCategory, destGUID, spellID)
+
+            -- Trigger any shared DR categories
+            if sharedCategories then
+                for i = 1, #sharedCategories do
+                    if sharedCategories[i] ~= drCategory then
+                        self:StartOrUpdateDRTimer(sharedCategories[i], destGUID, spellID)
+                    end
+                end
+            end
+        end
+
+        -- The debuff has faded or refreshed, DR timer starts
+        if eventType == "SPELL_AURA_REMOVED" then
+            data.startTime = currentTime
+            if isPlayer then
+                data.resetTime = DRList:GetResetTime(drCategory)
+            else
+                data.resetTime = DRList:GetResetTime("npc")
+            end
+            data.expirationTime = data.startTime + data.resetTime
+
+            -- Trigger main DR category
+            self:StartOrUpdateDRTimer(drCategory, destGUID, spellID)
+
+            -- Trigger any shared DR categories
+            if sharedCategories then
+                for i = 1, #sharedCategories do
+                    if sharedCategories[i] ~= drCategory then
+                        self:StartOrUpdateDRTimer(sharedCategories[i], destGUID, spellID)
+                    end
+                end
+            end
+        end
+    end
+
+    if eventType == "UNIT_DIED" then
+        if self.trackedUnits and self.trackedUnits[destGUID] then
+            self.trackedUnits[destGUID] = nil
+        end
+    end
+end
+
+
+function NP:HideContainers(unitToken)
+    if not self.unitContainers then return end
+
+    if unitToken then
+        local frame = self.unitContainers[unitToken]
+        if frame and frame.Hide then
+            frame:Hide()
+        end
+    else
+        for unit, frame in pairs(self.unitContainers) do
+            if frame and frame.Hide then
+                frame:Hide()
+            end
+        end
+    end
+end
+
+
+function NP:ShowContainers(unitToken)
+    if not self.unitContainers then return end
+
+    if unitToken then
+        local frame = self.unitContainers[unitToken]
+        if frame and frame.Hide then
+            frame:Show()
+        end
+    else
+        for unit, frame in pairs(self.unitContainers) do
+            if frame and frame.Show then
+                frame:Show()
+            end
+        end
+    end
+end
+
+
+
 
 
 function NP:ResetFrame(nameplateFrame)

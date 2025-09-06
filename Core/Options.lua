@@ -19,7 +19,7 @@ function DRT:GetOptions()
 					return inInstance and instanceType == "arena"
 				end,
 			},
-			--[[ general = {
+			general = {
 				type = "group",
 				name = "General",
 				desc = "General settings",
@@ -32,11 +32,32 @@ function DRT:GetOptions()
 						inline = true,
 						order = 1,
 						args = {
-							-- your general option entries here
+							test = {
+								type = "execute",
+								name = "Restore Defaults",
+								order = 1,
+								func = function()
+									StaticPopupDialogs["DRT_RESTORE_DEFAULTS"] = {
+										text = "Are you sure you want to restore defaults?\n\n\n|cffff0000WARNING:|r\n\nAll settings will be permanently lost!\nThis will reload your UI.",
+										button1 = "Yes",
+										button2 = "No",
+										OnAccept = function()
+											DRTDB = nil
+											ReloadUI()
+										end,
+										timeout = 0,
+										whileDead = true,
+										hideOnEscape = false,
+									}
+
+									local popup = StaticPopup_Show("DRT_RESTORE_DEFAULTS")
+									popup:SetFrameStrata("TOOLTIP")
+								end,
+							},
 						}
 					}
 				}
-			}, ]]
+			},
 		}
 	}
 

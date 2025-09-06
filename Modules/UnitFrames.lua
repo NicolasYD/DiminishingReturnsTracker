@@ -22,6 +22,7 @@ function UF:OnEnable()
 
     self.unitContainers = self.unitContainers or {}
     self.categoryFrames = self.categoryFrames or {}
+    self.trackedUnits = self.trackedUnits or {}
 
     for unitToken in pairs(self.db.profile.units) do
         self.categoryFrames[unitToken] = self.categoryFrames[unitToken] or {}
@@ -571,11 +572,10 @@ function UF:COMBAT_LOG_EVENT_UNFILTERED()
         local isPlayer = bit.band(destFlags, COMBATLOG_OBJECT_TYPE_PLAYER) ~= 0
         if not isPlayer and not DRList:IsPvECategory(drCategory) then return end
 
-        self.trackedPlayers = self.trackedPlayers or {}
-        self.trackedPlayers[destGUID] = self.trackedPlayers[destGUID] or {}
-        self.trackedPlayers[destGUID][drCategory] = self.trackedPlayers[destGUID][drCategory] or {}
+        self.trackedUnits[destGUID] = self.trackedUnits[destGUID] or {}
+        self.trackedUnits[destGUID][drCategory] = self.trackedUnits[destGUID][drCategory] or {}
 
-        local data = self.trackedPlayers[destGUID][drCategory]
+        local data = self.trackedUnits[destGUID][drCategory]
         local currentTime = GetTime()
 
         if eventType == "SPELL_AURA_APPLIED" or eventType == "SPELL_AURA_REFRESH" then
@@ -639,8 +639,8 @@ function UF:COMBAT_LOG_EVENT_UNFILTERED()
     end
 
     if eventType == "UNIT_DIED" then
-        if self.trackedPlayers and self.trackedPlayers[destGUID] then
-            self.trackedPlayers[destGUID] = nil
+        if self.trackedUnits and self.trackedUnits[destGUID] then
+            self.trackedUnits[destGUID] = nil
         end
     end
 end
@@ -650,7 +650,7 @@ function UF:PLAYER_TARGET_CHANGED()
     if DRT.testing then return end
 
     local targetGUID = UnitGUID("target")
-    local trackedUnit = self.trackedPlayers and self.trackedPlayers[targetGUID]
+    local trackedUnit = self.trackedUnits and self.trackedUnits[targetGUID]
     local unitToken = "target"
     local targetFrames = self.categoryFrames[unitToken]
 
@@ -668,7 +668,7 @@ function UF:PLAYER_TARGET_CHANGED()
 
         if frame then
             if data.expirationTime and GetTime() < data.expirationTime then
-                self:ShowDRIcons(drCategory, targetGUID)
+                self:StartOrUpdateDRTimer(drCategory, targetGUID)
             end
         end
     end
@@ -730,10 +730,10 @@ end
 
 
 function UF:ResetDRData()
-    if self.trackedPlayers then
-        for unitGUID, _ in pairs(self.trackedPlayers) do
-            for drCategory, _ in pairs(self.trackedPlayers[unitGUID]) do
-                self.trackedPlayers[unitGUID][drCategory] = nil
+    if self.trackedUnits then
+        for unitGUID, _ in pairs(self.trackedUnits) do
+            for drCategory, _ in pairs(self.trackedUnits[unitGUID]) do
+                self.trackedUnits[unitGUID][drCategory] = nil
             end
         end
     end
@@ -788,21 +788,16 @@ end
 
 
 function UF:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
-    self.trackedPlayers = self.trackedPlayers or {}
-    self.trackedPlayers[unitGUID] = self.trackedPlayers[unitGUID] or {}
-    self.trackedPlayers[unitGUID][drCategory] = self.trackedPlayers[unitGUID][drCategory] or {}
+    local tracked = self.trackedUnits[unitGUID]
 
-    local data = self.trackedPlayers[unitGUID][drCategory]
+    if not tracked then return end
+
+    local data = self.trackedUnits[unitGUID][drCategory]
 
     if spellID then
         data.lastSpellID = spellID
     end
 
-    self:ShowDRIcons(drCategory, unitGUID)
-end
-
-
-function UF:ShowDRIcons(drCategory, unitGUID)
     local unitTokens
     if DRT.testing then
         unitTokens = {unitGUID}
@@ -812,11 +807,10 @@ function UF:ShowDRIcons(drCategory, unitGUID)
 
     for _, unitToken in ipairs(unitTokens) do
         if self.db.profile.units[unitToken] then
-            local frame = self.categoryFrames[unitToken][drCategory]
-            local data = self.trackedPlayers[unitGUID][drCategory]
+            local frame = self.categoryFrames[unitToken] and self.categoryFrames[unitToken][drCategory]
             local categoryIcon = self.db.profile.units[unitToken].categories[drCategory].icon
 
-            if frame then
+            if data and frame then
                 local iconTexture
                 if categoryIcon == "dynamic" then
                     local spellInfo = C_Spell.GetSpellInfo(data.lastSpellID)
@@ -844,26 +838,26 @@ function UF:ShowDRIcons(drCategory, unitGUID)
                     [0] = {1, 0, 0, 1},
                 }
 
-                local text = diminishedText[data.diminished] or ""
-                local color = diminishedColor[data.diminished] or {1,1,1,1}
+                local text = diminishedText[data.diminished]
+                local color = diminishedColor[data.diminished]
+
+                for _, texture in pairs(frame.borderTextures) do
+                    texture:SetColorTexture(unpack(color))
+                end
 
                 frame.drIndicator.text:SetText(text)
                 frame.drIndicator.text:SetTextColor(unpack(color))
 
-                for _, tex in pairs(frame.borderTextures) do
-                    tex:SetColorTexture(unpack(color))
+                for _, texture in pairs(frame.drIndicator.borderTextures) do
+                    texture:SetColorTexture(unpack(color))
                 end
 
-                for _, tex in pairs(frame.drIndicator.borderTextures) do
-                    tex:SetColorTexture(unpack(color))
-                end
-
-                frame:SetScript("OnUpdate", function(self, elapsed)
+                frame:SetScript("OnUpdate", function(f, elapsed)
                     local currentTime = GetTime()
                     if currentTime >= data.expirationTime then
-                        self:SetScript("OnUpdate", nil)
-                        self:SetAlpha(0)
-                        self.active = false
+                        f:SetScript("OnUpdate", nil)
+                        f:SetAlpha(0)
+                        f.active = false
                         UF:UpdateFrames()
                     end
                 end)
@@ -909,12 +903,12 @@ function UF:StartTest()
         for drCategory in pairs(drCategories) do
             local spellID = GetRandomSpell(spellList, drCategory)
             for unitToken in pairs(units) do
-                UF.trackedPlayers = UF.trackedPlayers or {}
-                UF.trackedPlayers[unitToken] = UF.trackedPlayers[unitToken] or {}
-                UF.trackedPlayers[unitToken][drCategory] = UF.trackedPlayers[unitToken][drCategory] or {}
+                UF.trackedUnits = UF.trackedUnits or {}
+                UF.trackedUnits[unitToken] = UF.trackedUnits[unitToken] or {}
+                UF.trackedUnits[unitToken][drCategory] = UF.trackedUnits[unitToken][drCategory] or {}
 
                 local currentTime = GetTime()
-                local data = UF.trackedPlayers[unitToken][drCategory]
+                local data = UF.trackedUnits[unitToken][drCategory]
                 data.startTime = currentTime
                 data.resetTime = DRList:GetResetTime(drCategory)
                 data.expirationTime = data.startTime + data.resetTime
@@ -933,7 +927,7 @@ function UF:StartTest()
         UF.testTimer = C_Timer.NewTimer(reset, function()
             count = count + 1
             if count == 3 then
-                UF.trackedPlayers = {}
+                UF.trackedUnits = {}
                 count = 0
             end
             TestIcons()
@@ -945,7 +939,7 @@ end
 
 
 function UF:StopTest()
-    self.trackedPlayers = {}
+    self.trackedUnits = {}
     if self.categoryFrames then
         for unit in pairs(self.categoryFrames) do
             for drCategory in pairs(self.categoryFrames[unit]) do

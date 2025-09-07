@@ -760,9 +760,8 @@ function NP:StartTest()
 
         for drCategory, _ in pairs(drCategories) do
             local spellID = GetRandomSpell(spellList, drCategory)
-            for nameplateFrames, nameplateData in pairs(self.visibleNameplates) do
+            for _, nameplateData in pairs(self.visibleNameplates) do
                 local unitGUID = nameplateData.unitGUID
-                NP.trackedUnits = NP.trackedUnits or {}
                 NP.trackedUnits[unitGUID] = NP.trackedUnits[unitGUID] or {}
                 NP.trackedUnits[unitGUID][drCategory] = NP.trackedUnits[unitGUID][drCategory] or {}
 

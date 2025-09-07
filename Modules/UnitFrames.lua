@@ -900,14 +900,13 @@ function UF:StartTest()
 
 
     local function TestIcons()
-        local units = self.db.profile.units
+        local unitsTokens = self.db.profile.units
         local spellList = DRList:GetSpells()
         local reset = DRList:GetResetTime("stun")
 
         for drCategory in pairs(drCategories) do
             local spellID = GetRandomSpell(spellList, drCategory)
-            for unitToken in pairs(units) do
-                UF.trackedUnits = UF.trackedUnits or {}
+            for unitToken in pairs(unitsTokens) do
                 UF.trackedUnits[unitToken] = UF.trackedUnits[unitToken] or {}
                 UF.trackedUnits[unitToken][drCategory] = UF.trackedUnits[unitToken][drCategory] or {}
 
@@ -945,9 +944,9 @@ end
 function UF:StopTest()
     self.trackedUnits = {}
     if self.categoryFrames then
-        for unit in pairs(self.categoryFrames) do
-            for drCategory in pairs(self.categoryFrames[unit]) do
-                local frame = self.categoryFrames[unit][drCategory]
+        for unitToken in pairs(self.categoryFrames) do
+            for drCategory in pairs(self.categoryFrames[unitToken]) do
+                local frame = self.categoryFrames[unitToken][drCategory]
                 frame.active = false
                 frame:SetAlpha(0)
             end

@@ -375,22 +375,21 @@ function NP:UpdateFrames()
         return
     end
 
-    local settings = self.db.profile
-
     local growDirection = {
-        LEFT = {iconPoint = "RIGHT", anchorPoint = "LEFT"},
-        RIGHT = {iconPoint = "LEFT", anchorPoint = "RIGHT"},
-        UP = {iconPoint = "BOTTOM", anchorPoint = "TOP"},
-        DOWN = {iconPoint = "TOP", anchorPoint = "BOTTOM"},
+        LEFT = {relativePoint = "RIGHT", point = "LEFT"},
+        RIGHT = {relativePoint = "LEFT", point = "RIGHT"},
+        UP = {relativePoint = "BOTTOM", point = "TOP"},
+        DOWN = {relativePoint = "TOP", point = "BOTTOM"},
     }
 
-    for nameplateFrame, drCategory in pairs(self.categoryFrames) do
+    for nameplateFrame, categories in pairs(self.categoryFrames) do
+        local settings = self.db.profile
         local container = self.unitContainers[nameplateFrame]
         local activeFrames = {}
         local enabledFrameCount = 0
 
-        for category, frame in pairs(drCategory) do
-            frame.enabled = settings.drCategories[category].enabled
+        for drCategory, frame in pairs(categories) do
+            frame.enabled = settings.drCategories[drCategory].enabled
 
             if frame.enabled then
                 enabledFrameCount = enabledFrameCount + 1
@@ -398,9 +397,9 @@ function NP:UpdateFrames()
 
             if frame.active and frame.enabled then
                 table.insert(activeFrames, {
-                    category = category,
+                    category = drCategory,
                     frame = frame,
-                    priority = settings.drCategories[category].priority,
+                    priority = settings.drCategories[drCategory].priority,
                 })
             else
                 frame:SetAlpha(0)
@@ -416,57 +415,24 @@ function NP:UpdateFrames()
         for _, entry in ipairs(activeFrames) do
             local frame = entry.frame
             local direction = settings.growIcons
-            local iconPoint = growDirection[direction].iconPoint
-            local anchorPoint = growDirection[direction].anchorPoint
+            local relativePoint = growDirection[direction].relativePoint
+            local point = growDirection[direction].point
             local spacing = settings.iconsSpacing
             frame:ClearAllPoints()
             if not lastFrame then
-                frame:SetPoint(iconPoint, container)
+                frame:SetPoint(relativePoint, container)
             else
                 frame:SetPoint(
-                    iconPoint,
+                    relativePoint,
                     lastFrame,
-                    anchorPoint,
-                    (anchorPoint == "RIGHT" and spacing) or (anchorPoint == "LEFT" and -spacing) or 0,
-                    (anchorPoint == "TOP" and spacing) or (anchorPoint == "BOTTOM" and -spacing) or 0
+                    point,
+                    (point == "RIGHT" and spacing) or (point == "LEFT" and -spacing) or 0,
+                    (point == "TOP" and spacing) or (point == "BOTTOM" and -spacing) or 0
                 )
             end
             lastFrame = frame
         end
     end
-end
-
-
-function NP:NAME_PLATE_UNIT_ADDED(_, nameplateUnit)
-    local unitGUID = UnitGUID(nameplateUnit)
-    local nameplateFrame = C_NamePlate.GetNamePlateForUnit(nameplateUnit)
-
-    if not unitGUID or not nameplateFrame then return end
-
-    self.visibleNameplates[nameplateFrame] = self.visibleNameplates[nameplateFrame] or {}
-    self.visibleNameplates[nameplateFrame].unitGUID = unitGUID
-
-    -- Create DR frames for nameplates if they don't exist yet
-    if not self.unitContainers[nameplateFrame] then
-        self:CreateFrames(nameplateFrame)
-    end
-
-    self.unitContainers[nameplateFrame]:SetAlpha(1)
-
-    for drCategory, _ in pairs(drCategories) do
-        self:StartOrUpdateDRTimer(drCategory, unitGUID)
-    end
-end
-
-
-function NP:NAME_PLATE_UNIT_REMOVED(_, nameplateUnit)
-    local nameplateFrame = C_NamePlate.GetNamePlateForUnit(nameplateUnit)
-
-    if not nameplateFrame then return end
-
-    self.visibleNameplates[nameplateFrame] = nil
-
-    self:ResetFrame(nameplateFrame)
 end
 
 
@@ -552,6 +518,7 @@ function NP:COMBAT_LOG_EVENT_UNFILTERED()
                 data.resetTime = DRList:GetResetTime("npc") + (debuffDuration or 0)
             end
             data.expirationTime = data.startTime + data.resetTime
+
             -- Trigger main DR category
             self:StartOrUpdateDRTimer(drCategory, destGUID, spellID)
 
@@ -597,6 +564,56 @@ function NP:COMBAT_LOG_EVENT_UNFILTERED()
 end
 
 
+function NP:NAME_PLATE_UNIT_ADDED(_, nameplateUnit)
+    local unitGUID = UnitGUID(nameplateUnit)
+    local nameplateFrame = C_NamePlate.GetNamePlateForUnit(nameplateUnit)
+
+    if not unitGUID or not nameplateFrame then return end
+
+    self.visibleNameplates[nameplateFrame] = self.visibleNameplates[nameplateFrame] or {}
+    self.visibleNameplates[nameplateFrame].unitGUID = unitGUID
+
+    -- Create DR frames for nameplates if they don't exist yet
+    if not self.unitContainers[nameplateFrame] then
+        self:CreateFrames(nameplateFrame)
+    end
+
+    self.unitContainers[nameplateFrame]:SetAlpha(1)
+
+    for drCategory, _ in pairs(drCategories) do
+        self:StartOrUpdateDRTimer(drCategory, unitGUID)
+    end
+end
+
+
+function NP:NAME_PLATE_UNIT_REMOVED(_, nameplateUnit)
+    local nameplateFrame = C_NamePlate.GetNamePlateForUnit(nameplateUnit)
+
+    if not nameplateFrame then return end
+
+    self.visibleNameplates[nameplateFrame] = nil
+
+    self:ResetFrame(nameplateFrame)
+end
+
+
+function NP:ResetFrame(nameplateFrame)
+    local container = self.unitContainers[nameplateFrame]
+    if container then
+        container:SetAlpha(0)
+    end
+
+    local categoryFrames = self.categoryFrames[nameplateFrame]
+    for _, categoryFrame in pairs(categoryFrames) do
+        if categoryFrame then
+            categoryFrame:SetAlpha(0)
+            categoryFrame.icon:SetTexture(nil)
+            categoryFrame.cooldown:Clear()
+        end
+    end
+end
+
+
 function NP:HideContainers(unitToken)
     if not self.unitContainers then return end
 
@@ -606,7 +623,7 @@ function NP:HideContainers(unitToken)
             frame:Hide()
         end
     else
-        for unit, frame in pairs(self.unitContainers) do
+        for _, frame in pairs(self.unitContainers) do
             if frame and frame.Hide then
                 frame:Hide()
             end
@@ -624,27 +641,11 @@ function NP:ShowContainers(unitToken)
             frame:Show()
         end
     else
-        for unit, frame in pairs(self.unitContainers) do
+        for _, frame in pairs(self.unitContainers) do
             if frame and frame.Show then
                 frame:Show()
             end
         end
-    end
-end
-
-
-
-
-
-function NP:ResetFrame(nameplateFrame)
-    local container = self.unitContainers[nameplateFrame]
-    container:SetAlpha(0)
-
-    local categoryFrames = self.categoryFrames[nameplateFrame]
-    for _, categoryFrame in pairs(categoryFrames) do
-        categoryFrame:SetAlpha(0)
-        categoryFrame.icon:SetTexture(nil)
-        categoryFrame.cooldown:Clear()
     end
 end
 

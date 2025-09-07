@@ -604,6 +604,7 @@ function UF:COMBAT_LOG_EVENT_UNFILTERED()
                 data.resetTime = DRList:GetResetTime("npc") + (debuffDuration or 0)
             end
             data.expirationTime = data.startTime + data.resetTime
+
             -- Trigger main DR category
             self:StartOrUpdateDRTimer(drCategory, destGUID, spellID)
 
@@ -646,6 +647,24 @@ function UF:COMBAT_LOG_EVENT_UNFILTERED()
             self.trackedUnits[destGUID] = nil
         end
     end
+end
+
+
+function UF:GetUnitTokens(unitGUID)
+    local unitTokens = {
+        "player", "target", "focus",
+        "party1", "party2", "party3", "party4",
+        "arena1", "arena2", "arena3",
+    }
+
+    local matches = {}
+
+    for _, unitToken in ipairs(unitTokens) do
+        if UnitGUID(unitToken) == unitGUID then
+            table.insert(matches, unitToken)
+        end
+    end
+    return matches
 end
 
 
@@ -696,42 +715,6 @@ function UF:HideAllIcons()
 end
 
 
-function UF:HideContainers(unitToken)
-    if not self.unitContainers then return end
-
-    if unitToken then
-        local frame = self.unitContainers[unitToken]
-        if frame and frame.Hide then
-            frame:Hide()
-        end
-    else
-        for unit, frame in pairs(self.unitContainers) do
-            if frame and frame.Hide then
-                frame:Hide()
-            end
-        end
-    end
-end
-
-
-function UF:ShowContainers(unitToken)
-    if not self.unitContainers then return end
-
-    if unitToken then
-        local frame = self.unitContainers[unitToken]
-        if frame and frame.Hide then
-            frame:Show()
-        end
-    else
-        for unit, frame in pairs(self.unitContainers) do
-            if frame and frame.Show then
-                frame:Show()
-            end
-        end
-    end
-end
-
-
 function UF:ResetDRData()
     if self.trackedUnits then
         for unitGUID, _ in pairs(self.trackedUnits) do
@@ -772,21 +755,39 @@ function UF:SetPartyAnchorTo()
 end
 
 
-function UF:GetUnitTokens(unitGUID)
-    local unitTokens = {
-        "player", "target", "focus",
-        "party1", "party2", "party3", "party4",
-        "arena1", "arena2", "arena3",
-    }
+function UF:HideContainers(unitToken)
+    if not self.unitContainers then return end
 
-    local matches = {}
-
-    for _, unitToken in ipairs(unitTokens) do
-        if UnitGUID(unitToken) == unitGUID then
-            table.insert(matches, unitToken)
+    if unitToken then
+        local frame = self.unitContainers[unitToken]
+        if frame and frame.Hide then
+            frame:Hide()
+        end
+    else
+        for _, frame in pairs(self.unitContainers) do
+            if frame and frame.Hide then
+                frame:Hide()
+            end
         end
     end
-    return matches
+end
+
+
+function UF:ShowContainers(unitToken)
+    if not self.unitContainers then return end
+
+    if unitToken then
+        local frame = self.unitContainers[unitToken]
+        if frame and frame.Hide then
+            frame:Show()
+        end
+    else
+        for _, frame in pairs(self.unitContainers) do
+            if frame and frame.Show then
+                frame:Show()
+            end
+        end
+    end
 end
 
 

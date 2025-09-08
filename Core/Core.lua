@@ -1,5 +1,6 @@
 -- Create a new addon object using AceAddon-3.0 and include AceConsole-3.0 and AceEvent-3.0 as mixins
 DRT = LibStub("AceAddon-3.0"):NewAddon("DRT", "AceConsole-3.0", "AceEvent-3.0")
+local ACD = LibStub("AceConfigDialog-3.0")
 
 
 -- Called when the addon is first loaded (before it is enabled)
@@ -33,6 +34,9 @@ function DRT:OnInitialize()
         end
     end
 
+	-- Set the default size of the options window
+	ACD:SetDefaultSize("DRT", 700, 1000)
+
     -- Get the addon configuration options
     self:GetOptions()
 
@@ -52,6 +56,7 @@ end
 
 -- Called when the addon is disabled
 function DRT:OnDisable()
+	self:UnregisterAllEvents()
 end
 
 
@@ -97,7 +102,7 @@ end
 
 -- Opens the configuration window for the addon when the slash command is used
 function DRT:OpenOptions()
-    LibStub("AceConfigDialog-3.0"):Open("DRT")
+	ACD:Open("DRT")
 end
 
 

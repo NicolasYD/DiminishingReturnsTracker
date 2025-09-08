@@ -1,5 +1,4 @@
 local DRT = LibStub("AceAddon-3.0"):GetAddon("DRT")
-local ACR = LibStub("AceConfigRegistry-3.0")
 local NP = DRT:NewModule("NP", "AceEvent-3.0")
 
 local DRList = LibStub("DRList-1.0")
@@ -119,7 +118,7 @@ function NP:SetupDB()
             frameLevel = 100,
             positionLocked = true,
             point = "CENTER",
-            relativePoint = "CENTER",
+            relativePoint = "BOTTOM",
             offsetX = 0,
             offsetY = 15,
 
@@ -604,11 +603,13 @@ function NP:ResetFrame(nameplateFrame)
     end
 
     local categoryFrames = self.categoryFrames[nameplateFrame]
-    for _, categoryFrame in pairs(categoryFrames) do
-        if categoryFrame then
-            categoryFrame:SetAlpha(0)
-            categoryFrame.icon:SetTexture(nil)
-            categoryFrame.cooldown:Clear()
+    if categoryFrames then
+        for _, categoryFrame in pairs(categoryFrames) do
+            if categoryFrame then
+                categoryFrame:SetAlpha(0)
+                categoryFrame.icon:SetTexture(nil)
+                categoryFrame.cooldown:Clear()
+            end
         end
     end
 end

@@ -103,6 +103,14 @@ end
 -- Opens the configuration window for the addon when the slash command is used
 function DRT:OpenOptions()
 	ACD:Open("DRT")
+
+	-- Clamp the options window to the screen
+    local frame = ACD.OpenFrames["DRT"]
+    if frame and frame.frame then
+        frame.frame:SetClampedToScreen(true)
+        frame.frame:SetMovable(true)
+        frame.frame:SetUserPlaced(true)
+    end
 end
 
 

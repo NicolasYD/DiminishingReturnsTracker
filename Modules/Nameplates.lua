@@ -700,8 +700,8 @@ function NP:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
             [0] = {1, 0, 0, 1},
         }
 
-        local text = diminishedText[data.diminished]
-        local color = diminishedColor[data.diminished]
+        local text = diminishedText[data.diminished] or "X"
+        local color = diminishedColor[data.diminished] or {1, 1, 1, 1}
 
         for _, texture in pairs(frame.borderTextures) do
             texture:SetColorTexture(unpack(color))

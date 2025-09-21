@@ -118,10 +118,11 @@ function UF:SetupDB()
         borderSize = 1,
         frameSize = 30,
         frameLevel = 100,
-        positionLocked = true,
+        positionLocked = false,
+        anchorToFrame = false,
         anchorTo = "UIParent",
-        point = "TOPRIGHT",
-        relativePoint = "TOPRIGHT",
+        point = "CENTER",
+        relativePoint = "CENTER",
         offsetX = 0,
         offsetY = 0,
 
@@ -151,84 +152,60 @@ function UF:SetupDB()
         profile = {
             units = {
                 player = mergeTables(sharedOptions, {
-                    anchorTo = "PlayerFrame",
-                    offsetX = -20,
-                    offsetY = -5,
-                    growIcons = "LEFT",
+                    offsetX = -100,
+                    offsetY = -100,
                     order = 1,
                     }),
                 target = mergeTables(sharedOptions, {
-                    anchorTo = "TargetFrame",
-                    point = "TOPLEFT",
-                    relativePoint = "TOPLEFT",
-                    offsetX = 20,
-                    offsetY = -5,
+                    offsetX = 100,
+                    offsetY = -100,
                     growIcons = "RIGHT",
                     order = 2,
                 }),
                 focus = mergeTables(sharedOptions, {
-                    enabled = false,
-                    frameSize = 30,
-                    anchorTo = "FocusFrame",
-                    point = "TOPLEFT",
-                    relativePoint = "TOPLEFT",
-                    offsetX = 20,
-                    offsetY = -5,
+                    offsetX = 250,
+                    offsetY = -100,
                     growIcons = "RIGHT",
                     order = 3,
                 }),
                 party1 = mergeTables(sharedOptions, {
-                    enabled = false,
-                    frameSize = 30,
-                    anchorTo = "CompactPartyFrameMember2",
+                    offsetX = -200,
+                    offsetY = 150,
+                    growIcons = "RIGHT",
                     order = 4,
                 }),
                 party2 = mergeTables(sharedOptions, {
-                    enabled = false,
-                    frameSize = 30,
-                    anchorTo = "CompactPartyFrameMember3",
+                    offsetX = -200,
+                    offsetY = 100,
+                    growIcons = "RIGHT",
                     order = 5,
                 }),
                 party3 = mergeTables(sharedOptions, {
                     enabled = false,
-                    frameSize = 30,
-                    anchorTo = "CompactPartyFrameMember4",
+                    offsetX = -200,
+                    offsetY = 50,
+                    growIcons = "RIGHT",
                     order = 6,
                 }),
                 party4 = mergeTables(sharedOptions, {
                     enabled = false,
-                    frameSize = 30,
-                    anchorTo = "CompactPartyFrameMember5",
+                    offsetX = -200,
+                    growIcons = "RIGHT",
                     order = 7,
                 }),
                 arena1 = mergeTables(sharedOptions, {
-                    enabled = false,
-                    frameSize = 35,
-                    anchorTo = "CompactArenaFrameMember1",
-                    point = "BOTTOMLEFT",
-                    relativePoint = "BOTTOMRIGHT",
-                    offsetX = -5,
-                    offsetY = 5,
+                    offsetX = 200,
+                    offsetY = 200,
                     order = 8,
                 }),
                 arena2 = mergeTables(sharedOptions, {
-                    enabled = false,
-                    frameSize = 35,
-                    anchorTo = "CompactArenaFrameMember2",
-                    point = "BOTTOMLEFT",
-                    relativePoint = "BOTTOMRIGHT",
-                    offsetX = -5,
-                    offsetY = 5,
+                    offsetX = 200,
+                    offsetY = 150,
                     order = 9,
                 }),
                 arena3 = mergeTables(sharedOptions, {
-                    enabled = false,
-                    frameSize = 35,
-                    anchorTo = "CompactArenaFrameMember3",
-                    point = "BOTTOMLEFT",
-                    relativePoint = "BOTTOMRIGHT",
-                    offsetX = -5,
-                    offsetY = 5,
+                    offsetX = 200,
+                    offsetY = 100,
                     order = 10,
                 }),
             },
@@ -305,10 +282,6 @@ function UF:StyleFrames()
             end
         end
 
-        self:MoveFrame(container, unitToken, function (f)
-            ACR:NotifyChange("DRT") -- Update values in options
-        end)
-
         -- Container styling
         container:ClearAllPoints()
         container:SetPoint(settings.point, settings.anchorTo, settings.relativePoint, settings.offsetX, settings.offsetY)
@@ -323,7 +296,7 @@ function UF:StyleFrames()
         -- Container texture styling
         container.texture:ClearAllPoints()
         container.texture:SetAllPoints()
-        if settings.positionLocked then
+        if settings.positionLocked or not settings.enabled then
             container.texture:SetColorTexture(0, 0, 0, 0)
         else
             container.texture:SetDrawLayer("OVERLAY", 1)
@@ -334,7 +307,7 @@ function UF:StyleFrames()
         -- Container text label styling
         container.text:ClearAllPoints()
         container.text:SetAllPoints()
-        if settings.positionLocked then
+        if settings.positionLocked or not settings.enabled then
             container.text:SetText("")
         else
             container.text:SetDrawLayer("OVERLAY", 2)
@@ -471,6 +444,10 @@ function UF:StyleFrames()
                 end
             end
         end
+
+        self:MoveFrame(container, unitToken, function (f)
+            ACR:NotifyChange("DRT") -- Update values in options
+        end)
     end
 end
 
@@ -1073,6 +1050,40 @@ function UF:MoveFrame(frame, unit, onStopCallback)
 end
 
 
+function UF:ReparentUnitContainer(unit, newParent)
+    local frame = self.unitContainers[unit]
+
+    local screenX = frame:GetLeft()
+    local screenY = frame:GetBottom()
+
+    -- Reparent
+    frame:SetParent(newParent)
+
+    -- Clear points to avoid conflicts
+    frame:ClearAllPoints()
+
+    local uiScale = UIParent:GetEffectiveScale()
+    local frameScale = frame:GetEffectiveScale()
+
+    -- Adjust for scale differences
+    local adjustedX = screenX * frameScale / uiScale
+    local adjustedY = screenY * frameScale / uiScale
+
+    local point = "BOTTOMLEFT"
+    local relativePoint = "BOTTOMLEFT"
+
+    -- Set new point relative to UIParent to keep it in the same spot
+    frame:SetPoint(point, UIParent, relativePoint, adjustedX, adjustedY)
+
+    self.db.profile.units[unit].anchorTo = newParent:GetName()
+    self.db.profile.units[unit].point = point
+    self.db.profile.units[unit].relativePoint = relativePoint
+    self.db.profile.units[unit].offsetX = adjustedX
+    self.db.profile.units[unit].offsetY = adjustedY
+
+end
+
+
 function UF:BuildGeneralOptions(unit)
     local pointValues = {
         TOP = "TOP",
@@ -1340,6 +1351,29 @@ function UF:BuildGeneralOptions(unit)
                     width = "full",
                     order = 20,
                 },
+                anchorToFrame = {
+                    type = "toggle",
+                    name = "Anchor To Frame",
+                    desc = "Anchor the icons to a specific frame.",
+                    get = function()
+                        return self.db.profile.units[unit].anchorToFrame
+                    end,
+                    set = function(_, value)
+                        if not value then
+                            self:ReparentUnitContainer(unit, UIParent)
+                            ACR:NotifyChange("DRT")
+                        end
+                        self.db.profile.units[unit].anchorToFrame = value
+                        self:StyleFrames()
+                    end,
+                    order = 30,
+                },
+                separator2 = {
+                    type = "description",
+                    name = "",
+                    width = "full",
+                    order = 40,
+                },
                 anchorTo = {
                     type = "input",
                     name = "Anchor Frame Name",
@@ -1352,9 +1386,9 @@ function UF:BuildGeneralOptions(unit)
                         self:StyleFrames()
                     end,
                     disabled = function ()
-                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled
+                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled or not self.db.profile.units[unit].anchorToFrame
                     end,
-                    order = 30,
+                    order = 50,
                 },
                 selectFrame = {
                     type = "execute",
@@ -1363,20 +1397,24 @@ function UF:BuildGeneralOptions(unit)
                     func = function()
                         DRT:FrameSelector(function(selectedFrame)
                             self.db.profile.units[unit].anchorTo = selectedFrame
+                            self.db.profile.units[unit].point = "CENTER"
+                            self.db.profile.units[unit].relativePoint = "CENTER"
+                            self.db.profile.units[unit].offsetX = 0
+                            self.db.profile.units[unit].offsetY = 0
                             ACR:NotifyChange("DRT")
                             self:StyleFrames()
                         end)
                     end,
                     disabled = function ()
-                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled
+                        return not self:IsEnabled() or not self.db.profile.units[unit].enabled or not self.db.profile.units[unit].anchorToFrame
                     end,
-                    order = 40,
+                    order = 60,
                 },
-                separator2 = {
+                separator3 = {
                     type = "description",
                     name = "",
                     width = "full",
-                    order = 50,
+                    order = 70,
                 },
                 point = {
                     type = "select",
@@ -1393,7 +1431,7 @@ function UF:BuildGeneralOptions(unit)
                     disabled = function ()
                         return not self:IsEnabled() or not self.db.profile.units[unit].enabled
                     end,
-                    order = 60,
+                    order = 80,
                 },
                 relativePoint = {
                     type = "select",
@@ -1410,13 +1448,13 @@ function UF:BuildGeneralOptions(unit)
                     disabled = function ()
                         return not self:IsEnabled() or not self.db.profile.units[unit].enabled
                     end,
-                    order = 70,
+                    order = 90,
                 },
-                separator3 = {
+                separator4 = {
                     type = "description",
                     name = "",
                     width = "full",
-                    order = 80,
+                    order = 100,
                 },
                 offsetX = {
                     type = "range",
@@ -1432,7 +1470,7 @@ function UF:BuildGeneralOptions(unit)
                         self.db.profile.units[unit].offsetX = value
                         self:StyleFrames()
                     end,
-                    order = 90,
+                    order = 110,
                 },
                 offsetY = {
                     type = "range",
@@ -1448,7 +1486,7 @@ function UF:BuildGeneralOptions(unit)
                         self.db.profile.units[unit].offsetY = value
                         self:StyleFrames()
                     end,
-                    order = 100,
+                    order = 120,
                 },
             }
         }

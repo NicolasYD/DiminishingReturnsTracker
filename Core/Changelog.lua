@@ -1,4 +1,9 @@
 DRT_CHANGELOGS = {
+    ["v11.2.0.8-beta"] = [[
+        - Frames are now bound to UIParent by default. They can still be anchored to a specific frame with the frame selector in the options.
+        - Unlocked frames can be moved with left mouse button. Right mouse button locks their position on the screen.
+    ]],
+
     ["v11.2.0.7-beta"] = [[
         - New Nameplates Module: DRs can now be displayed on nameplates!
         - UnitFrames Module: DRs can now be displayed for arena123 and are bound to the Blizzard arena frames by default.

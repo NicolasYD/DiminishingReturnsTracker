@@ -227,7 +227,7 @@ function UF:CreateFrames(unitToken)
     end
 
     -- Create the container frame and store the reference
-    local container = CreateFrame("Frame", "UFContainer." .. unitToken, UIParent)
+    local container = CreateFrame("Button", "UFContainer." .. unitToken, UIParent)
     self.unitContainers[unitToken] = container
 
     -- Create the container texture
@@ -994,20 +994,21 @@ end
 
 function UF:MoveFrame(frame, unit, onStopCallback)
     local settings = self.db.profile.units[unit]
-    local isLocked = settings.positionLocked
+    local positionLocked = settings.positionLocked
 
-    if isLocked then
-        -- Disable dragging
+    if positionLocked then
+        -- Disable dragging and clicking
         frame:EnableMouse(false)
         frame:SetMovable(false)
-        frame:RegisterForDrag()
         frame:SetScript("OnDragStart", nil)
         frame:SetScript("OnDragStop", nil)
+        frame:SetScript("OnClick", nil)
     else
-        -- Enable dragging
+        -- Enable dragging and clicking
         frame:EnableMouse(true)
         frame:SetMovable(true)
         frame:RegisterForDrag("LeftButton")
+        frame:RegisterForClicks("RightButtonUp")
         frame:SetClampedToScreen(true)
 
         -- Save the original anchor
@@ -1045,6 +1046,25 @@ function UF:MoveFrame(frame, unit, onStopCallback)
                     onStopCallback(f)
                 end
             end
+        end)
+
+        -- Lock frame position on right click
+        frame:SetScript("OnClick", function(f, button)
+            if button == "RightButton" then
+                self.db.profile.units[unit].positionLocked = true
+                self:StyleFrames()
+            end
+        end)
+
+        -- Tooltip on mouse enter and leave
+        frame:SetScript("OnEnter", function(f)
+            GameTooltip:SetOwner(f, "ANCHOR_RIGHT")
+            GameTooltip:SetText("Left Click: Drag to move frame\n\nRight Click: Lock frame position")  -- Customize the tooltip text as needed
+            GameTooltip:Show()
+        end)
+
+        frame:SetScript("OnLeave", function(f)
+            GameTooltip:Hide()
         end)
     end
 end

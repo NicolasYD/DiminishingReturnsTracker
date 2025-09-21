@@ -1008,21 +1008,24 @@ function UF:MoveFrame(frame, unit, onStopCallback)
         frame:EnableMouse(true)
         frame:SetMovable(true)
         frame:RegisterForDrag("LeftButton")
-        frame:RegisterForClicks("RightButtonUp")
+        frame:RegisterForClicks("AnyUp")
         frame:SetClampedToScreen(true)
 
         -- Save the original anchor
         local origPoint, origRelativeTo, origRelativePoint, _, _ = frame:GetPoint()
 
         local dragStartX, dragStartY
+        local isDragging = false  -- Track if the frame is being dragged
 
         frame:SetScript("OnDragStart", function(f)
             dragStartX, dragStartY = f:GetCenter()
             f:StartMoving()
+            isDragging = true  -- Start dragging
         end)
 
         frame:SetScript("OnDragStop", function(f)
             f:StopMovingOrSizing()
+            isDragging = false  -- Stop dragging
 
             local oldOffsetX = settings.offsetX
             local oldOffsetY = settings.offsetY
@@ -1048,9 +1051,9 @@ function UF:MoveFrame(frame, unit, onStopCallback)
             end
         end)
 
-        -- Lock frame position on right click
+        -- Lock frame position on right click, but only if it's not being dragged
         frame:SetScript("OnClick", function(f, button)
-            if button == "RightButton" then
+            if button == "RightButton" and not isDragging then
                 self.db.profile.units[unit].positionLocked = true
                 self:StyleFrames()
             end
@@ -1058,8 +1061,8 @@ function UF:MoveFrame(frame, unit, onStopCallback)
 
         -- Tooltip on mouse enter and leave
         frame:SetScript("OnEnter", function(f)
-            GameTooltip:SetOwner(f, "ANCHOR_RIGHT")
-            GameTooltip:SetText("Left Click: Drag to move frame\n\nRight Click: Lock frame position")  -- Customize the tooltip text as needed
+            GameTooltip:SetOwner(f, "ANCHOR_CURSOR")
+            GameTooltip:SetText("Left Click:\nDrag to move frame\n\nRight Click:\nLock frame position")  -- Customize the tooltip text as needed
             GameTooltip:Show()
         end)
 

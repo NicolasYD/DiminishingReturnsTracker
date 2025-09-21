@@ -1830,6 +1830,9 @@ function UF:GetOptions()
                         local toUnit = info[#info - 1]
                         local exclude = {
                             "enabled",
+                            "growIcons",
+                            "positionLocked",
+                            "anchorToFrame",
                             "anchorTo",
                             "point",
                             "relativePoint",

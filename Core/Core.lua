@@ -22,10 +22,6 @@ function DRT:OnInitialize()
         }
     })
 
-	self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
-	self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
-	self.db.RegisterCallback(self, "OnProfileReset", "OnProfileChanged")
-
     -- Disable modules based on saved profile settings (AceAddon will auto-enable the module at startup, regardless of saved profile settings)
     for name, module in self:IterateModules() do
         local modSettings = self.db.profile.modules[name]
@@ -46,6 +42,10 @@ end
 
 -- Called when the addon is enabled (e.g., when logging in or reloading UI)
 function DRT:OnEnable()
+	self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
+	self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
+	self.db.RegisterCallback(self, "OnProfileReset", "OnProfileChanged")
+
     -- Register slash commands to open the configuration panel
     self:RegisterChatCommand("drt", "OpenOptions")
     self:RegisterChatCommand("diminishingreturnstracker", "OpenOptions")
@@ -62,6 +62,7 @@ end
 
 function DRT:OnProfileChanged()
 	for name, module in self:IterateModules() do
+		-- Call OnProfileChanged() in the module
         if module:IsEnabled() and type(module.OnProfileChanged) == "function" then
             module:OnProfileChanged()
         else

@@ -62,7 +62,7 @@ end
 
 function DRT:OnProfileChanged()
 	for name, module in self:IterateModules() do
-        if type(module.OnProfileChanged) == "function" then
+        if module:IsEnabled() and type(module.OnProfileChanged) == "function" then
             module:OnProfileChanged()
         else
             return

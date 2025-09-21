@@ -35,7 +35,7 @@ function DRT:OnInitialize()
     end
 
 	-- Set the default size of the options window
-	ACD:SetDefaultSize("DRT", 700, 1000)
+	ACD:SetDefaultSize("DRT", 700, 700)
 
     -- Get the addon configuration options
     self:GetOptions()

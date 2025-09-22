@@ -22,14 +22,6 @@ function DRT:OnInitialize()
         }
     })
 
-    -- Disable modules based on saved profile settings (AceAddon will auto-enable the module at startup, regardless of saved profile settings)
-    for name, module in self:IterateModules() do
-        local modSettings = self.db.profile.modules[name]
-        if modSettings and modSettings.enabled == false then
-            self:DisableModule(name)
-        end
-    end
-
 	-- Set the default size of the options window
 	ACD:SetDefaultSize("DRT", 700, 700)
 
@@ -42,6 +34,8 @@ end
 
 -- Called when the addon is enabled (e.g., when logging in or reloading UI)
 function DRT:OnEnable()
+	self:EnableDisableModules()
+
 	self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
 	self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
 	self.db.RegisterCallback(self, "OnProfileReset", "OnProfileChanged")
@@ -60,7 +54,22 @@ function DRT:OnDisable()
 end
 
 
+function DRT:EnableDisableModules()
+	-- Enable/disable modules based on saved profile settings
+    for name, module in self:IterateModules() do
+        local settings = self.db.profile.modules[name]
+        if settings and settings.enabled then
+			self:EnableModule(name)
+		else
+			self:DisableModule(name)
+        end
+    end
+end
+
+
 function DRT:OnProfileChanged()
+	self:EnableDisableModules()
+
 	for name, module in self:IterateModules() do
 		-- Call OnProfileChanged() in the module
         if module:IsEnabled() and type(module.OnProfileChanged) == "function" then

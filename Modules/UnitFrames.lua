@@ -182,6 +182,7 @@ function UF:SetupDB()
                 }),
                 party3 = mergeTables(sharedOptions, {
                     enabled = false,
+                    positionLocked = true,
                     offsetX = -300,
                     offsetY = 50,
                     growIcons = "RIGHT",
@@ -189,6 +190,7 @@ function UF:SetupDB()
                 }),
                 party4 = mergeTables(sharedOptions, {
                     enabled = false,
+                    positionLocked = true,
                     offsetX = -300,
                     growIcons = "RIGHT",
                     order = 7,
@@ -675,9 +677,12 @@ end
 
 
 function UF:GROUP_ROSTER_UPDATE()
-    self:HideAllIcons()
-    self:ResetDRData()
-    self:SetPartyAnchorTo()
+    local inInstance, instanceType = IsInInstance()
+    if inInstance and instanceType == "arena" then
+        self:HideAllIcons()
+        self:ResetDRData()
+        self:SetPartyAnchorTo()
+    end
 end
 
 

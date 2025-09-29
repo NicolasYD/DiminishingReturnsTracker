@@ -709,29 +709,23 @@ end
 
 
 function UF:SetPartyAnchorTo()
-    local partyMember = {
-        "party1",
-        "party2",
-        "party3",
-        "party4",
-    }
-    local partyFrames = {
-        _G["CompactPartyFrameMember1"],
-        _G["CompactPartyFrameMember2"],
-        _G["CompactPartyFrameMember3"],
-        _G["CompactPartyFrameMember4"],
-        _G["CompactPartyFrameMember5"],
-    }
+    local partyMembers = { "party1", "party2", "party3", "party4" }
+    local frameLookup = {}
 
-    for _, member in ipairs(partyMember) do
-        local settings = self.db.profile.units[member].anchorTo
-        if settings:match("CompactPartyFrameMember") then
-            for _, frame in ipairs(partyFrames) do
-                if UnitGUID(member) == UnitGUID(frame.unit) then
-                    local frameName = frame:GetName()
-                    self.db.profile.units[member].anchorTo = frameName
-                end
-            end
+    -- Build a map from unit GUIDs to frame names
+    for _, member in ipairs(partyMembers) do
+        local frameName = self.db.profile.units[member].anchorTo
+        local frame = _G[frameName]
+        if frame and frame.unit and UnitGUID(frame.unit) then
+            frameLookup[UnitGUID(frame.unit)] = frameName
+        end
+    end
+
+    -- Assign correct anchorTo based on UnitGUID match
+    for _, member in ipairs(partyMembers) do
+        local guid = UnitGUID(member)
+        if guid and frameLookup[guid] then
+            self.db.profile.units[member].anchorTo = frameLookup[guid]
         end
     end
 end

@@ -1,4 +1,8 @@
 DRT_CHANGELOGS = {
+    ["v11.2.0.10-beta"] = [[
+        - Added button to the general options to quickly lock/unlock all enabled unit frames.
+    ]],
+
     ["v11.2.0.9-beta"] = [[
         - Fixed some minor bugs.
     ]],

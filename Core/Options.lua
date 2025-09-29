@@ -30,12 +30,38 @@ function DRT:GetOptions()
 						name = "General",
 						desc = "General settings",
 						inline = true,
-						order = 1,
+						order = 10,
 						args = {
-							test = {
+							lockUnlock = {
+								type = "execute",
+								name = "Lock/Unlock Frames",
+								desc = "Lock or unlock the position of all enabled frames at once.",
+								order = 10,
+								func = function()
+									self:LockUnlockFrames()
+								end,
+							},
+							separator1 = {
+								type = "description",
+								name = "",
+								width = "full",
+								order = 20,
+							},
+
+						}
+					},
+					dangerZone = {
+						type = "group",
+						name = "|cffff0000Danger Zone|r",
+						desc = "General settings",
+						inline = true,
+						order = 20,
+						args = {
+							restoreDefaults = {
 								type = "execute",
 								name = "Restore Defaults",
-								order = 1,
+								desc = "Delete all saved variables from this addon and start with an empty database.",
+								order = 10,
 								func = function()
 									StaticPopupDialogs["DRT_RESTORE_DEFAULTS"] = {
 										text = "Are you sure you want to restore defaults?\n\n\n|cffff0000WARNING:|r\n\nAll settings will be permanently lost!\nThis will reload your UI.",
@@ -55,7 +81,7 @@ function DRT:GetOptions()
 								end,
 							},
 						}
-					}
+					},
 				}
 			},
 		}

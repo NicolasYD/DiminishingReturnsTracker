@@ -167,6 +167,15 @@ function DRT:PLAYER_ENTERING_WORLD()
 end
 
 
+function DRT:LockUnlockFrames()
+	for name, module in self:IterateModules() do
+		if module:IsEnabled() and module.LockUnlockFrames and type(module.LockUnlockFrames) == "function" then
+			module:LockUnlockFrames()
+		end
+	end
+end
+
+
 function DRT:FrameSelector(onSelectCallback)
 	local frameChooserFrame = DRT.frameChooserFrame
 	local frameChooserBox = DRT.frameChooserBox

@@ -755,6 +755,25 @@ function UF:HideContainers(unitToken)
 end
 
 
+function UF:LockUnlockFrames()
+    local firstLocked = nil
+    for unit, settings in pairs(self.db.profile.units) do
+        if unit and settings.enabled == true then
+            local positionLocked = self.db.profile.units[unit].positionLocked
+            if firstLocked == nil then
+                firstLocked = positionLocked
+            end
+            if positionLocked and firstLocked == true then
+                self.db.profile.units[unit].positionLocked = false
+            elseif not positionLocked and firstLocked == false then
+                self.db.profile.units[unit].positionLocked = true
+            end
+            self:StyleFrames()
+        end
+    end
+end
+
+
 function UF:ShowContainers(unitToken)
     if not self.unitContainers then return end
 

@@ -793,7 +793,7 @@ function UF:StartOrUpdateDRTimer(drCategory, unitGUID, spellID)
 
     local data = self.trackedUnits[unitGUID][drCategory]
 
-    if spellID then
+    if data and spellID then
         data.lastSpellID = spellID
     end
 
